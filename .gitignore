@@ -1,0 +1,41 @@
+# Ignore all
+*
+
+# Unignore all dirs
+!*/
+
+# Unignore all with extensions
+!*.*
+
+### Above combination will ignore all files without extension ###
+
+# exclude subdirs
+s3e_old
+src
+
+# exclude by file type
+*.txt
+*.swp
+
+# exclude hidden files
+.*
+
+# exclude special cases
+w2v/compute-accuracy.c
+w2v/demo-analogy.sh
+w2v/demo-classes.sh
+w2v/demo-phrase-accuracy.sh
+w2v/demo-phrases.sh
+w2v/demo-train-big-model-v1.sh
+w2v/demo-word-accuracy.sh
+w2v/demo-word.sh
+w2v/dep_w2v.py
+w2v/dep_w2v_proc.py
+w2v/distance.c
+w2v/ptb-train.sh
+w2v/word-analogy
+w2v/word-analogy.c
+w2v/word2phrase
+w2v/word2phrase.c
+w2v/word2vec.c
+s3e.vocab
