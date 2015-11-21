@@ -81,10 +81,8 @@ def Train(fp):
     n = opts.dim
     c = np.random.rand(m, n)
     w = np.random.rand(m, n)
-    input(prompt=None)
-    input(prompt=None)
-    input(prompt=None)
-    input(prompt=None)
+
+
     return
 
 def ParseArgs():

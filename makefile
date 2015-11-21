@@ -7,7 +7,7 @@ DBGFLAGS = -lm -pthread -O0 -g -v -da -Q
 
 all 	: s3e test
 
-s3e 	: s3e.c text_proc.c misc.c
+s3e 	: s3e.c 
 	$(CC) s3e.c -o s3e $(CFLAGS)
 test 	: s3e_test.c s3e.c text_proc.c misc.c
 	$(CC) s3e_test.c -o s3e_test $(CFLAGS)
