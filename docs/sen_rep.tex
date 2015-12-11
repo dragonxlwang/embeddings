@@ -463,6 +463,18 @@ V = \sigma\left( T^{SYN} \times_1 {\color{dgreen} V_1} \times_2 {\color{dgreen} 
 \right)
 \end{eqnarray}
 
+\begin{eqnarray}
+T = \sum\limits_{i} \sum\limits_{j} p_{i, j} T_{i,j} \\
+p_{i,j} \geq 0, \sum\limits_{i,j} p_{i,j} = 1 ~\textrm{(simplex)} \\
+p_{i,j} = p_{i}^{v_1} p_{j}^{v_2} \\
+p_i^{v} \propto \exp(v_i) \\
+T_{i,j} = \sum\limits_k {\color{blue} a_{i,j}^{(k)} } \odot {\color{blue} b_{i,j}^{(k)} } \odot  {\color{blue} c_{i,j}^{(k)}} \\
+{w'}_x &=& \sum\limits_{i,j} p_{i,j} M_{i,j}^{left} {\color{red}w_z} \\
+{w'}_y &=& \sum\limits_{i,j} p_{i,j} M_{i,j}^{right} {\color{red}w_z} \\
+\mathrm{score}(x,y,z) = -\frac{1}{2}( || w_x - {w'}_x ||^2  + ||w_y - {w'}_y||^2)  \\
+\mathrm{score}(tree) =  \mathrm{score}(root) + \rho \cdot (\mathrm{score}(left\_sub\_tree) + Score(right\_sub\_tree) )
+
+\end{eqnarray}
 
 \iffalse
 \subsection{Sentence as a Sequence}
