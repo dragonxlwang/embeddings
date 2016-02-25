@@ -20,24 +20,26 @@
 #include <ctype.h>
 
 const long long max_size = 2000;         // max length of strings
-const long long N = 1;                   // number of closest words
+long long N = 10;                   // number of closest words
 const long long max_w = 50;              // max length of vocabulary entries
 
 int main(int argc, char **argv)
 {
   FILE *f;
-  char st1[max_size], st2[max_size], st3[max_size], st4[max_size], bestw[N][max_size], file_name[max_size], ch;
-  float dist, len, bestd[N], vec[max_size];
+  char st1[max_size], st2[max_size], st3[max_size], st4[max_size], bestw[100][max_size], file_name[max_size], ch;
+  float dist, len, bestd[100], vec[max_size];
   long long words, size, a, b, c, d, b1, b2, b3, threshold = 0;
   float *M;
   char *vocab;
-  int TCN, CCN = 0, TACN = 0, CACN = 0, SECN = 0, SYCN = 0, SEAC = 0, SYAC = 0, QID = 0, TQ = 0, TQS = 0;
+  int TCN, TACN = 0, SECN = 0, SYCN = 0, QID = 0, TQ = 0, TQS = 0;
+  float CACN = 0, CCN = 0, SEAC = 0, SYAC = 0, s;
   if (argc < 2) {
     printf("Usage: ./compute-accuracy <FILE> <threshold>\nwhere FILE contains word projections, and threshold is used to reduce vocabulary of the model for fast approximate evaluation (0 = off, otherwise typical value is 30000)\n");
     return 0;
   }
   strcpy(file_name, argv[1]);
   if (argc > 2) threshold = atoi(argv[2]);
+  if (argc > 3) N = atoi(argv[3]);
   f = fopen(file_name, "rb");
   if (f == NULL) {
     printf("Input file not found\n");
@@ -77,13 +79,13 @@ int main(int argc, char **argv)
     if ((!strcmp(st1, ":")) || (!strcmp(st1, "EXIT")) || feof(stdin)) {
       if (TCN == 0) TCN = 1;
       if (QID != 0) {
-        printf("ACCURACY TOP1: %.2f %%  (%d / %d)\n", CCN / (float)TCN * 100, CCN, TCN);
-        printf("Total accuracy: %.2f %%   Semantic accuracy: %.2f %%   Syntactic accuracy: %.2f %% \n", CACN / (float)TACN * 100, SEAC / (float)SECN * 100, SYAC / (float)SYCN * 100);
+        // printf("ACCURACY TOP: %.2f %%  (%d / %d)\n", CCN / (float)TCN * 100, (int) CCN, TCN);
+        // printf("Total accuracy: %.2f %%   Semantic accuracy: %.2f %%   Syntactic accuracy: %.2f %% \n", CACN / (float)TACN * 100, SEAC / (float)SECN * 100, SYAC / (float)SYCN * 100);
       }
       QID++;
       scanf("%s", st1);
       if (feof(stdin)) break;
-      printf("%s:\n", st1);
+      // printf("%s:\n", st1);
       TCN = 0;
       CCN = 0;
       continue;
@@ -129,15 +131,25 @@ int main(int argc, char **argv)
         }
       }
     }
-    if (!strcmp(st4, bestw[0])) {
-      CCN++;
-      CACN++;
-      if (QID <= 5) SEAC++; else SYAC++;
+    s = 1;
+    for(a = 0; a < N; a++) {
+      if(!strcmp(st4, bestw[a])) {
+        if(QID <= 5) SEAC += s; else SYAC += s;
+        CCN += s;
+        CACN += s;
+      }
+      s /= 2;
     }
+    // if (!strcmp(st4, bestw[0])) {
+    //   CCN++;
+    //   CACN++;
+    //   if (QID <= 5) SEAC++; else SYAC++;
+    // }
     if (QID <= 5) SECN++; else SYCN++;
     TCN++;
     TACN++;
   }
   printf("Questions seen / total: %d %d   %.2f %% \n", TQS, TQ, TQS/(float)TQ*100);
+  printf("Total: %.2f %%   Semantic: %.2f %%   Syntactic: %.2f %% \n", CACN / (float)TACN * 100, SEAC / (float)SECN * 100, SYAC / (float)SYCN * 100);
   return 0;
 }

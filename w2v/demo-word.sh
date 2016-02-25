@@ -11,10 +11,10 @@ elif [[ $1 == me_k ]]; then
   prog="word2vec_me_k"
 fi
 data="text8"
+output=${data}_${prog}
 
-make $prog distance
-  time ./$prog -train $data -output ${data}_${prog}.bin \
+make $prog
+  time ./$prog -train $data -output ${output}.bin \
       -cbow 1 -size 100 -window 8 -negative 25 -hs 0 \
-      -sample 1e-4 -threads 20 -binary 1 -iter 100 -alpha 0.01 \
+      -sample 1e-4 -threads 20 -binary 1 -iter 15 -alpha 0.01 \
       -save-vocab "${data}_vocab.txt"
-  ./distance ${data}_${prog}.bin

@@ -106,7 +106,7 @@ int main(int argc, char **argv) {
       }
     }
     if (b == -1) continue;
-    printf("\n                                              Word       Cosine distance\n------------------------------------------------------------------------\n");
+    printf("\n                          Word  Cosine distance\n----------------------------------------------\n");
     for (a = 0; a < size; a++) vec[a] = 0;
     for (b = 0; b < cn; b++) {
       if (bi[b] == -1) continue;
@@ -136,7 +136,7 @@ int main(int argc, char **argv) {
         }
       }
     }
-    for (a = 0; a < N; a++) printf("%50s\t\t%f\n", bestw[a], bestd[a]);
+    for (a = 0; a < N; a++) printf("%30s\t%f\n", bestw[a], bestd[a]);
   }
   return 0;
 }

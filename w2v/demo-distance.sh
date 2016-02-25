@@ -1,4 +1,4 @@
-make compute-accuracy
+make distance
 
 if [[ $1 == ns ]]; then
   prog="word2vec"
@@ -18,10 +18,4 @@ data="text8"
 output=${data}_${prog}_${embeded}.bin
 echo $output
 
-for i in `seq 1 10`; do
-  echo "top ${i}"
-  ./compute-accuracy ${output} 30000 $i < questions-words.txt
-done
-
-# to compute accuracy with the full vocabulary,
-# use: ./compute-accuracy vectors.bin < questions-words.txt
+./distance ${output}
