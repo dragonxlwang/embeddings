@@ -296,6 +296,7 @@ struct Vocabulary* LoadVocab(char* vcb_fp, struct Vocabulary* vcb, int cap) {
       vcb_fp, vcb->size);
   return vcb;
 }
+
 /*
 long long int neg_unigram_size = 1e8;
 void InitNegUnigram()

@@ -6,7 +6,7 @@
 *.tar.gz
 *.gz
 tags
-*test*
+[Tt]est/
 
 ## exclude special cases
 .remote-sync.json
