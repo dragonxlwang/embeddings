@@ -84,6 +84,8 @@ def read_file(path,
               p_headline=True, p_dateline=True,
               p_coreferences=True, p_sentences=True,
               p_text=True):
+    amp = re.compile(r'&amp;', re.IGNORECASE)
+    bamp = re.compile(r'&')
     with gzip.open(path) as source:
         # source.readline()
         # file_line = source.readline() + "</FILE>"
@@ -92,11 +94,17 @@ def read_file(path,
 
         lines = []
         for line in source:
-            lines.append(line)
+            # fix ampersand escape
+            lines.append(bamp.sub('&amp;', amp.sub('&', line)))
+            # lines.append(line)
 
             if line.strip() == '</DOC>':
                 lines = ['<xml>'] + lines
                 lines.append('</xml>')
+                # print 80 * '='
+                # for ln in lines:
+                #     print ln
+                # print 80 * '='
                 xml = etree.fromstringlist(lines).find('DOC')
 
                 doc_id = xml.attrib['id']

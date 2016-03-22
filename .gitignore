@@ -1,9 +1,12 @@
 ## exclude by file type
 *.txt
 *.swp
+*.pyc
 *.zip
 *.tar.gz
 *.gz
+tags
+*test*
 
 ## exclude special cases
 .remote-sync.json
