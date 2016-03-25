@@ -6,7 +6,6 @@
 *.tar.gz
 *.gz
 tags
-[Tt]est/
 
 ## exclude special cases
-.remote-sync.json
+[Tt]est/
