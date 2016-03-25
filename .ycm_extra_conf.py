@@ -37,7 +37,8 @@ flags = [
     '-x',
     'c',
     '-Wall',
-    '-Wno-unused-value',
+    # '-Wno-unused-value',
+    # '-Wno-unused-variable',
 ]
 
 

@@ -116,7 +116,6 @@ def lowercase_vcb_file():
         for w in sorted(unigram, key=lambda x: unigram[x], reverse=True):
             fout.write('{0} {1}\n'.format(unigram[w], w))
 
-
 if __name__ == '__main__':
     # main()
     lowercase_vcb_file()

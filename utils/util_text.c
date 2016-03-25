@@ -1,3 +1,6 @@
+#ifndef UTIL_TEXT
+#define UTIL_TEXT
+
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -43,7 +46,7 @@ void VocabInitStorage(struct Vocabulary* vcb, int cap) {
   vcb->id2next = (int*)malloc(cap * sizeof(int));
   vcb->hash2head = (int*)malloc(HASH_SLOTS * sizeof(int));
   if (!vcb->id2wd || !vcb->id2cnt || !vcb->id2next || !vcb->hash2head) {
-    LOG(0, "allocating error @ Initvcb");
+    LOG(0, "[VocabInitStorage]: allocating error\n");
     exit(1);
   }
   vcb->size = 0;
@@ -106,7 +109,8 @@ void VocabReduce(struct Vocabulary* vcb, int cap) {
   for (i = 0; i < vcb->size; i++) keys[i] = i;
   value_for_compare = vcb->id2cnt;
   qsort(keys, vcb->size, sizeof(int), CmpVal);
-  int size = ((vcb->size > cap) ? cap : vcb->size);
+  int size = vcb->size;
+  if (cap > 0 && size > cap) size = cap;
   char** words = (char**)malloc(size * sizeof(char*));
   int* counts = (int*)malloc(size * sizeof(int));
   for (i = 0; i < size; i++) {
@@ -123,22 +127,24 @@ void VocabReduce(struct Vocabulary* vcb, int cap) {
   return;
 }
 
-int VocabGet(struct Vocabulary* vcb, char* str) {
+int VocabGetId(struct Vocabulary* vcb, char* str) {
   int h = GetStrHash(str);
   int id = vcb->hash2head[h];
   while (id != -1 && strcmp(vcb->id2wd[id], str) != 0) id = vcb->id2next[id];
   return id;  // UNK = -1 or in vocab
 }
 
+char* VocabGetWord(struct Vocabulary* vcb, int id) { return vcb->id2wd[id]; }
+
 //////////
 // Text //
 //////////
 
-int text_init_vcb_cap = 0x200000;         // around 2M slots by default
-int text_max_word_len = 100;              // one word has max 100 char
-int text_max_sent_wct = 200;              // one sentence has max 200 word
-long long int text_corpus_word_cnt = 0;   // corpus wourd count
-long long int text_corpus_file_size = 0;  // corpus file size
+int TEXT_INIT_VCB_CAP = 0x200000;         // around 2M slots by default
+int TEXT_MAX_WORD_LEN = 100;              // one word has max 100 char
+int TEXT_MAX_SENT_WCT = 200;              // one sentence has max 200 word
+long long int TEXT_CORPUS_WORD_CNT = 0;   // corpus wourd count
+long long int TEXT_CORPUS_FILE_SIZE = 0;  // corpus file size
 
 /**
 *  @return  flag : 0 hit by space or tab
@@ -151,7 +157,7 @@ int TextReadWord(FILE* fin, char* str) {
   while (1) {
     ch = fgetc(fin);
     if (ch == ' ' || ch == '\t' || ch == '\n' || ch == '\r' || ch == EOF) break;
-    if (i < text_max_word_len - 1) str[i++] = ch;
+    if (i < TEXT_MAX_WORD_LEN - 1) str[i++] = ch;
   }
   str[i] = '\0';
   while (1) {
@@ -212,12 +218,13 @@ int TextNormWord(char* str, int if_lower, int if_rm_trail_punc) {
   return flag;
 }
 
-void TextBuildVocab(char* text_file_path, int if_norm_word) {
-  char* str = (char*)malloc(text_max_word_len);
+struct Vocabulary* TextBuildVocab(char* text_file_path, int if_norm_word,
+                                  int cap) {
+  char* str = (char*)malloc(TEXT_MAX_WORD_LEN);
   int flag = 0;
-  struct Vocabulary* vcb = VocabCreate(text_init_vcb_cap);
+  struct Vocabulary* vcb = VocabCreate(TEXT_INIT_VCB_CAP);
   FILE* fin = fopen(text_file_path, "rb");
-  text_corpus_word_cnt = 0;
+  TEXT_CORPUS_WORD_CNT = 0;
   if (!fin) {
     LOG(0, "[error]: cannot find file %s\n", text_file_path);
     exit(1);
@@ -227,25 +234,64 @@ void TextBuildVocab(char* text_file_path, int if_norm_word) {
     if (if_norm_word) TextNormWord(str, 1, 1);
     if (str[0] != '\0') {  // filter 0-length string
       VocabAdd(vcb, str, 1);
-      text_corpus_word_cnt++;
-      if ((text_corpus_word_cnt & 0xFFFFF) == 0xFFFFF)
+      TEXT_CORPUS_WORD_CNT++;
+      if ((TEXT_CORPUS_WORD_CNT & 0xFFFFF) == 0xFFFFF)
         LOG(2, "[TextBuildVocab]: reading %lld [*2^20 | M] word\r",
-            text_corpus_word_cnt >> 20);
+            TEXT_CORPUS_WORD_CNT >> 20);
     }
     if (flag == 2) break;
   }
-  LOG(1, "[TextBuildVocab]: reading %lld [*2^20 | M] word\r",
-      text_corpus_word_cnt >> 20);
-  text_corpus_file_size = ftell(fin);
+  LOG(1, "[TextBuildVocab]: reading %lld [*2^20 | M] word\n",
+      TEXT_CORPUS_WORD_CNT >> 20);
+  TEXT_CORPUS_FILE_SIZE = ftell(fin);
   LOG(1, "[TextBuildVocab]: file size %lld [*2^20 | M]\n",
-      text_corpus_file_size >> 20);
+      TEXT_CORPUS_FILE_SIZE >> 20);
   fclose(fin);
+  VocabReduce(vcb, cap);
+  return vcb;
+}
+
+void TextSaveVocab(char* vcb_fp, struct Vocabulary* vcb) {
+  int i;
+  FILE* fout = fopen(vcb_fp, "wb");
+  fprintf(fout, "%lld %lld\n", TEXT_CORPUS_FILE_SIZE, TEXT_CORPUS_WORD_CNT);
+  for (i = 0; i < vcb->size; i++)
+    fprintf(fout, "%s %d\n", vcb->id2wd[i], vcb->id2cnt[i]);
+  fclose(fout);
+  LOG(1, "[saving vocabulary]: %s\n", vcb_fp);
   return;
 }
 
+struct Vocabulary* TextLoadVocab(char* vcb_fp, int cap, int high_freq_cutoff) {
+  int cnt, flag, id = 0;
+  FILE* fin = fopen(vcb_fp, "rb");
+  char s_word[TEXT_MAX_WORD_LEN], s_cnt[TEXT_MAX_WORD_LEN];
+  if (!fin) {
+    LOG(0, "[error]: cannot find file %s\n", vcb_fp);
+    exit(1);
+  }
+  fscanf(fin, "%lld %lld\n", &TEXT_CORPUS_FILE_SIZE, &TEXT_CORPUS_WORD_CNT);
+  struct Vocabulary* vcb =
+      VocabCreate((cap > 0) ? (int)(cap * 1.1) : TEXT_INIT_VCB_CAP);
+  while (1) {
+    TextReadWord(fin, s_word);
+    flag = TextReadWord(fin, s_cnt);
+    cnt = atoi(s_cnt);
+    if (id++ >= high_freq_cutoff) VocabAdd(vcb, s_word, cnt);
+    if (flag == 2) break;
+    if (cap > 0 && vcb->size >= cap) break;
+  }
+  fclose(fin);
+  LOG(1,
+      "[loading vocabulary]: %s\n"
+      "[loading vocabulary]: size %d\n",
+      vcb_fp, vcb->size);
+  return vcb;
+}
+
 int TextReadSent(FILE* fin, struct Vocabulary* vcb, int* word_ids,
-                 int if_norm_word) {
-  char* str = (char*)malloc(text_max_word_len);
+                 int if_norm_word, int till_line_end) {
+  char* str = (char*)malloc(TEXT_MAX_WORD_LEN);
   int flag1, flag2 = 0, id;
   int word_num = 0;
   while (1) {
@@ -254,47 +300,20 @@ int TextReadSent(FILE* fin, struct Vocabulary* vcb, int* word_ids,
     if (str[0] == '\0')
       id = -1;  // empty string
     else
-      id = VocabGet(vcb, str);  // non-empty string
-    if (id != -1 && word_num < text_max_sent_wct) word_ids[word_num++] = id;
-    if (flag1 > 0 || flag2 == 1) break;
+      id = VocabGetId(vcb, str);  // non-empty string
+    if (id != -1 && word_num < TEXT_MAX_SENT_WCT) word_ids[word_num++] = id;
+    if ((till_line_end && flag1 > 0) || (flag1 > 0 || flag2 == 1)) break;
   }
+  if (flag1 == 2) word_num = -1;
   return word_num;
 }
 
-void SaveVocab(char* vcb_fp, struct Vocabulary* vcb) {
+void TextPrintSent(struct Vocabulary* vcb, int* word_ids, int word_num) {
   int i;
-  FILE* fout = fopen(vcb_fp, "wb");
-  fprintf(fout, "%lld %lld\n", text_corpus_file_size, text_corpus_word_cnt);
-  for (i = 0; i < vcb->size; i++)
-    fprintf(fout, "%s %d\n", vcb->id2wd[i], vcb->id2cnt[i]);
-  fclose(fout);
-  LOG(1, "[saving vocabulary]: %s\n", vcb_fp);
+  for (i = 0; i < word_num; i++)
+    printf("%s(%d) ", VocabGetWord(vcb, word_ids[i]), word_ids[i]);
+  printf("\n");
   return;
-}
-
-struct Vocabulary* LoadVocab(char* vcb_fp, struct Vocabulary* vcb, int cap) {
-  int cnt, flag;
-  FILE* fin = fopen(vcb_fp, "rb");
-  char s_word[text_max_word_len], s_cnt[text_max_word_len];
-  if (!fin) {
-    LOG(0, "[error]: cannot find file %s\n", vcb_fp);
-    exit(1);
-  }
-  fscanf(fin, "%lld %lld\n", &text_corpus_file_size, &text_corpus_word_cnt);
-  vcb = VocabCreate(cap);
-  while (1) {
-    TextReadWord(fin, s_word);
-    flag = TextReadWord(fin, s_cnt);
-    cnt = atoi(s_cnt);
-    VocabAdd(vcb, s_word, cnt);
-    if (flag == 2) break;
-  }
-  fclose(fin);
-  LOG(1,
-      "[loading vocabulary]: %s\n"
-      "[loading vocabulary]: size %d\n",
-      vcb_fp, vcb->size);
-  return vcb;
 }
 
 /*
@@ -322,3 +341,5 @@ int SampleNegUnigram(unsigned long long int s)
   return neg_unigram[r];
 }
 */
+
+#endif /* end of include guard: UTIL_TEXT */
