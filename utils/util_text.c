@@ -147,10 +147,10 @@ long long int TEXT_CORPUS_WORD_CNT = 0;   // corpus wourd count
 long long int TEXT_CORPUS_FILE_SIZE = 0;  // corpus file size
 
 /**
-*  @return  flag : 0 hit by space or tab
-*                  1 hit by newline
-*                  2 hit by end-of-file
-*/
+ *  @return  flag : 0 hit by space or tab
+ *                  1 hit by newline
+ *                  2 hit by end-of-file
+ */
 int TextReadWord(FILE* fin, char* str) {
   int i = 0, flag = -1;
   char ch;
@@ -317,29 +317,29 @@ void TextPrintSent(struct Vocabulary* vcb, int* word_ids, int word_num) {
 }
 
 /*
-long long int neg_unigram_size = 1e8;
-void InitNegUnigram()
-{
-  long long int i, j, k, total_word_cnt = 0, cnt = 0;
-  real cdf, power = 0.75;
-  for (i = 0; i < vocab.size; i++)
-    total_word_cnt += pow(vocab.id2cnt[i], power);
-  neg_unigram = (int*)malloc(1e8 * sizeof(int));
-  for (i = 0, j = 0; i < vocab.size; i++) {
-    cnt += pow(vocab.id2cnt[i], power);
-    cdf = (real)cnt / total_word_cnt;
-    cdf = (cdf > 1.0) ? 1.0 : cdf;
-    k = neg_unigram_size * cdf;
-    while (j < k)
-      neg_unigram[j++] = i;
-  }
-  return;
-}
-int SampleNegUnigram(unsigned long long int s)
-{
-  long long int r = RAND(s) * neg_unigram_size;
-  return neg_unigram[r];
-}
-*/
+   long long int neg_unigram_size = 1e8;
+   void InitNegUnigram()
+   {
+   long long int i, j, k, total_word_cnt = 0, cnt = 0;
+   real cdf, power = 0.75;
+   for (i = 0; i < vocab.size; i++)
+   total_word_cnt += pow(vocab.id2cnt[i], power);
+   neg_unigram = (int*)malloc(1e8 * sizeof(int));
+   for (i = 0, j = 0; i < vocab.size; i++) {
+   cnt += pow(vocab.id2cnt[i], power);
+   cdf = (real)cnt / total_word_cnt;
+   cdf = (cdf > 1.0) ? 1.0 : cdf;
+   k = neg_unigram_size * cdf;
+   while (j < k)
+   neg_unigram[j++] = i;
+   }
+   return;
+   }
+   int SampleNegUnigram(unsigned long long int s)
+   {
+   long long int r = RAND(s) * neg_unigram_size;
+   return neg_unigram[r];
+   }
+   */
 
 #endif /* end of include guard: UTIL_TEXT */

@@ -21,6 +21,13 @@
     for (i = 1; i < l; i++) x = (x < arr[i]) ? arr[i] : x; \
     x;                                                     \
   })
+#define MIN(arr, l)                                        \
+  ({                                                       \
+    __typeof__(arr[0]) x = arr[0];                         \
+    int i;                                                 \
+    for (i = 1; i < l; i++) x = (x > arr[i]) ? arr[i] : x; \
+    x;                                                     \
+  })
 #define ABS(x) ((x) < 0 ? -(x) : (x))
 #define ABSMAX(arr, l)                                               \
   ({                                                                 \
@@ -30,8 +37,20 @@
     x;                                                               \
   })
 
+#define NUM_EXP_TABLE_LEN 0xFFFFF
+real NUM_EXP_TABLE[0xFFFFF];
+real NUM_EXP_HIGH = 1.0;
+real NUM_EXP_LOW = -15;
+real NumExp(real x) {
+  int i = (x - NUM_EXP_LOW) / (NUM_EXP_HIGH - NUM_EXP_LOW) * NUM_EXP_TABLE_LEN;
+  if (i < 0)
+    return 0;
+  else
+    return NUM_EXP_TABLE[i];
+}
+
 int NUM_MAX_PRINT_ELEM = 10;
-double NUM_EPS = 1e-6;
+real NUM_EPS = 1e-6;
 
 void NumPrintArr(char *name, real *arr, int l) {
   int i = 0;
@@ -93,17 +112,18 @@ void NumPrintArrAbsMaxColor(char *name, real *arr, int l) {
   fflush(stdout);
 }
 
-void NumNewHugeVec(void **ptr, long long int mem_size) {
-  if (posix_memalign(ptr, 128, mem_size)) {
+real *NumNewHugeVec(long long int elem_num) {
+  real *ptr;
+  if (posix_memalign((void **)&ptr, 128, elem_num * sizeof(real))) {
     LOG(0, "[NumNewHugeVec]: memory allocation failed!");
     exit(1);
   }
-  return;
+  return ptr;
 }
 
-void NumReadVec(real *ptr, long long int mem_size, FILE *fin) {
-  long long int actual_read_size = fread(ptr, sizeof(real), mem_size, fin);
-  if (actual_read_size != mem_size) {
+void NumReadVec(real *ptr, long long int elem_num, FILE *fin) {
+  long long int actual_read_size = fread(ptr, sizeof(real), elem_num, fin);
+  if (actual_read_size != elem_num) {
     printf("[NumReadVec]: read error!");
     exit(1);
   }
@@ -134,6 +154,61 @@ real NumVecL2Dist(real *a, real *b, int l) {
 real NumVecCos(real *a, real *b, int l) {
   return NumVecDot(a, b, l) / (NumVecNorm(a, l) + NUM_EPS) /
          (NumVecNorm(b, l) + NUM_EPS);
+}
+
+// in place a <- a + c * b
+void NumVecAddCVec(real *a, real *b, real c, int l) {
+  int i;
+  for (i = 0; i < l; i++) a[i] += c * b[i];
+  return;
+}
+
+// in place a <- c * a
+void NumVecMulC(real *a, real c, int l) {
+  int i;
+  for (i = 0; i < l; i++) a[i] *= c;
+  return;
+}
+
+// x <- m * a; m: r * l, a: l
+void NumMulMatVec(real *m, real *a, int r, int l, real *x) {
+  int i, j, k = 0;
+  for (i = 0; i < r; i++) x[i] = 0;
+  for (j = 0; j < l; j++)
+    for (i = 0; i < r; i++) x[i] += m[k++] * a[j];
+  return;
+}
+
+// x <- c * a + d * b
+void NumAddCVecDVec(real *a, real *b, real c, real d, int l, real *x) {
+  int i;
+  for (i = 0; i < l; i++) x[i] = c * a[i] + d * b[i];
+  return;
+}
+
+real NumSoftMax(real *a, int l) {  // return entropy
+  int i;
+  real c = MAX(a, l);
+  real s = 0, e = 0, t;
+  for (i = 0; i < l; i++) {
+    t = NumExp(a[i] - c);
+    e += t * a[i];
+    a[i] = t;
+    s += a[i];
+  }
+  for (i = 0; i < l; i++) a[i] /= s;
+  e = -e / s + log(s);
+  return e;
+}
+
+void NumInit() {
+  // Initialize exp table;
+  int i;
+  real x;
+  for (i = 0; i < NUM_EXP_TABLE_LEN; i++) {
+    x = NUM_EXP_LOW + i * (NUM_EXP_HIGH - NUM_EXP_LOW) / NUM_EXP_TABLE_LEN;
+    NUM_EXP_TABLE[i] = exp(x);
+  }
 }
 
 #endif /* end of include guard: UTIL_NUM */
