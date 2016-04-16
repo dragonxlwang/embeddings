@@ -146,12 +146,8 @@ int TEXT_MAX_SENT_WCT = 200;              // one sentence has max 200 word
 long long int TEXT_CORPUS_WORD_CNT = 0;   // corpus wourd count
 long long int TEXT_CORPUS_FILE_SIZE = 0;  // corpus file size
 
-/**
- *  @return  flag : 0 hit by space or tab
- *                  1 hit by newline
- *                  2 hit by end-of-file
- */
 int TextReadWord(FILE* fin, char* str) {
+  // return flag: 0=hit by space or tab; 1=newline; 2=end-of-file
   int i = 0, flag = -1;
   char ch;
   while (1) {
@@ -178,10 +174,8 @@ int TextReadWord(FILE* fin, char* str) {
   return flag;
 }
 
-/**
- * @return  : if if_rm_trail_punc set 1, return 1 if str ends with .,:;?!
- */
 int TextNormWord(char* str, int if_lower, int if_rm_trail_punc) {
+  // return: when if_rm_trail_punc set 1, return 1 if str ends with .,:;?!
   int i = 0, j, flag = 0;
   char ch;
   if (if_lower)

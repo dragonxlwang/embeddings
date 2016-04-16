@@ -34,6 +34,12 @@ int log_debug_mode = 2;
       fflush(stdout);                      \
     }                                      \
   })
+#define ARR_CLONE(d, s, l)                                       \
+  ({                                                             \
+    d = (__typeof__(s[0])*)malloc(l * sizeof(__typeof__(s[0]))); \
+    int i;                                                       \
+    for (i = 0; i < l; i++) d[i] = s[i];                         \
+  })
 
 void printfc(char fg_color_code, char bg_color_code, const char* format, ...) {
   char f = (fg_color_code >= 'A' && fg_color_code <= 'Z')

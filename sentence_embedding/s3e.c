@@ -44,22 +44,22 @@
        ? s3eExpTable[(int)(((real)(x) / s3eSquashTableRange / 2.0 + 0.5) * \
                            s3eSquashTableSize)]                            \
        : 0)
-#define SIGM(x)                                                          \
-  (((x) <= -s3eSquashTableRange)                                         \
-       ? 0                                                               \
-       : (((x) >= s3eSquashTableRange)                                   \
-              ? 1                                                        \
-              : s3eSigmTable[(                                           \
-                    int)(((real)(x) / s3eSquashTableRange / 2.0 + 0.5) * \
-                         s3eSquashTableSize)]))
-#define TANH(x)                                                          \
-  (((x) <= -s3eSquashTableRange)                                         \
-       ? -1                                                              \
-       : (((x) >= s3eSquashTableRange)                                   \
-              ? 1                                                        \
-              : s3eTanhTable[(                                           \
-                    int)(((real)(x) / s3eSquashTableRange / 2.0 + 0.5) * \
-                         s3eSquashTableSize)]))
+#define SIGM(x)                                                            \
+  (((x) <= -s3eSquashTableRange)                                           \
+       ? 0                                                                 \
+       : (((x) >= s3eSquashTableRange)                                     \
+              ? 1                                                          \
+              : s3eSigmTable                                               \
+                    [(int)(((real)(x) / s3eSquashTableRange / 2.0 + 0.5) * \
+                           s3eSquashTableSize)]))
+#define TANH(x)                                                            \
+  (((x) <= -s3eSquashTableRange)                                           \
+       ? -1                                                                \
+       : (((x) >= s3eSquashTableRange)                                     \
+              ? 1                                                          \
+              : s3eTanhTable                                               \
+                    [(int)(((real)(x) / s3eSquashTableRange / 2.0 + 0.5) * \
+                           s3eSquashTableSize)]))
 #define MAX(arr, l)                                                          \
   ({                                                                         \
     __typeof__(arr[0]) tmp_max_x = arr[0];                                   \
@@ -83,7 +83,7 @@
     __typeof__(arr[0]) tmp_ss_x = 0;             \
     int tmp_ss_i;                                \
     for (tmp_ss_i = 0; tmp_ss_i < l; tmp_ss_i++) \
-      tmp_ss_x += ABS(arr[tmp_ss_i]);            \
+        tmp_ss_x += ABS(arr[tmp_ss_i]);          \
     tmp_ss_x;                                    \
   })
 #define CADD(arr, l, x)                                                      \
@@ -96,7 +96,7 @@
     __typeof__(arr[0]) tmp_sum_s = 0;               \
     int tmp_sum_i;                                  \
     for (tmp_sum_i = 0; tmp_sum_i < l; tmp_sum_i++) \
-      tmp_sum_s += arr[tmp_sum_i];                  \
+        tmp_sum_s += arr[tmp_sum_i];                \
     tmp_sum_s;                                      \
   })
 #define SWAP(x, y)                \
@@ -106,7 +106,7 @@
     y = tmp_swap_z;               \
   })
 #define SPAN_ID(l, b, e) \
-  ((int)((b) + (2 * (l) + 2 - (e) + (b)) * ((e) - (b)-1) / 2))
+  ((int)((b) + (2 * (l) + 2 - (e) + (b)) * ((e) - (b) - 1) / 2))
 #define STR_CLONE(d, s)                                \
   ({                                                   \
     d = (char*)malloc((strlen(s) + 1) * sizeof(char)); \
@@ -175,13 +175,13 @@ int SMN_SIZE, DSMN_SIZE, SYN_SIZE;
 
 real adag_eps = 1e-6;
 // Preprint Squashing table
-real *s3eExpTable, *s3eSigmTable, *s3eTanhTable;
+real* s3eExpTable, *s3eSigmTable, *s3eTanhTable;
 // File size, parsed num, progress, effective corpus words count
 long long int file_size = -1, eff_corpus_w_cnt = 0;
 long long int prd_sent_num = 0, prd_word_num = 0;
 real progress = 0, speed = 0, accuracy = 0.5;
 // Intermediate model save schedule
-real *save_thread_start, *save_thread_cnt;
+real* save_thread_start, *save_thread_cnt;
 real save_thread_interval;
 // time
 clock_t t0;

@@ -7,30 +7,38 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <pthread.h>
 #include "../utils/util_misc.c"
 #include "../utils/util_num.c"
 #include "../utils/util_text.c"
-#include "constants.c"
+#include "variables.c"
 
 int N, K, V;
 
 // model parameter is shared across all threads
 struct Model {
-  real *scr;  // source vector;
-  real *tar;  // target vector;
-};
+  real* scr;  // source vector;
+  real* tar;  // target vector;
+}* model;
 
 // each thread worker maintains a bookkeeping
 struct Bookkeeping {
-  real *dd;   // list(K):vector(V) dual distribution
-  real *ent;  // list(K):
-  real *ww;   // list(K):vector(N) W * dd, synthesis word in prime
-  real *hh;   // list(K):vector(N) avg(h_k), sufficient stats
-  int *hn;    // list(K): |h_k|
+  real* dd;   // list(K):vector(V) dual distribution
+  real* ent;  // list(K):
+  real* ww;   // list(K):vector(N) W * dd, synthesis word in prime
+  real* hh;   // list(K):vector(N) avg(h_k), sufficient stats
+  int* hn;    // list(K): |h_k|
 };
 real gd_ss;  // gradient descent step size
 
-void ModelGdUpdate(struct Model *m, int p, int i, real c, real *g) {
+// after this times vocabulary online updates, perform one offline update
+real offline_interval_vocab_ratio = 1.0;
+
+// vocabulary
+struct Vocabulary* vcb;
+
+void ModelGdUpdate(struct Model* m, int p, int i, real c, real* g) {
+  // model update: p=0: scr; p=1: tar
   int j;
   if (p == 0) {
     // update scr
@@ -42,8 +50,8 @@ void ModelGdUpdate(struct Model *m, int p, int i, real c, real *g) {
   return;
 }
 
-// fit the sentence with the best dual distribution
-int DualDecode(real *h, struct Bookkeeping *b) {
+int DualDecode(real* h, struct Bookkeeping* b) {
+  // fit the sentence with the best dual distribution
   real s, t;
   int z;
   for (int k = 0; k < K; k++) {
@@ -53,14 +61,14 @@ int DualDecode(real *h, struct Bookkeeping *b) {
       z = k;
     }
   }
-  // update bookkeeping
+  // update bookkeeping: hh, hn
   NumVecAddCVec(b->hh + z * N, h, 1.0, N);
   b->hn++;
   return z;
 }
 
-// update dual distributions and others
-void DualUpate(struct Bookkeeping *b, struct Model *m) {
+void DualUpateOffline(struct Bookkeeping* b, struct Model* m) {
+  // update dual distributions and others
   // update hh
   for (int k = 0; k < K; k++) NumVecMulC(b->hh + k * N, 1.0 / b->hn[k], N);
   for (int k = 0; k < K; k++) {
@@ -68,7 +76,7 @@ void DualUpate(struct Bookkeeping *b, struct Model *m) {
     for (int i = 0; i < V; i++) {
       b->dd[k * V + i] = NumVecDot(m->tar + i * N, b->hh + k * N, N);
     }
-    // update ent
+    // normalize dd and update ent
     b->ent[k] = NumSoftMax(b->dd + k * N, N);
     // update ww
     NumMulMatVec(m->tar, b->dd + k * V, N, V, b->ww + k * N);
@@ -76,9 +84,9 @@ void DualUpate(struct Bookkeeping *b, struct Model *m) {
   return;
 }
 
-// update primal parameters online
-void PrimalUpdateOnline(int *ids, int l, struct Bookkeeping *b,
-                        struct Model *m) {
+void PrimalUpdateOnline(int* ids, int l, struct Bookkeeping* b,
+                        struct Model* m) {
+  // update primal parameters online for one sentence (ids)
   int i;
   real h0[NUP], h[NUP], w0[NUP], w[NUP];
   int z[SUP];
@@ -87,23 +95,25 @@ void PrimalUpdateOnline(int *ids, int l, struct Bookkeeping *b,
   for (i = 0; i < l; i++) NumVecAddCVec(h0, m->scr + ids[i] * N, 1, N);
   // dual decode
   for (i = 0; i < l; i++) {
-    NumAddCVecDVec(h0, m->scr + ids[i] * N, 1, -1, N, h);
-    z[i] = DualDecode(h, b);
-    NumVecAddCVec(w0, m->tar + ids[i] * N, 1, N);
+    NumAddCVecDVec(h0, m->scr + ids[i] * N, 1, -1, N, h);  // h
+    z[i] = DualDecode(h, b);                               // z
+    NumVecAddCVec(w0, m->tar + ids[i] * N, 1, N);          // w - ww
     NumVecAddCVec(w0, b->ww + z[i] * N, -1, N);
-    // update m->tar
+    // update m->tar (1st part, online update)
     ModelGdUpdate(m, 1, ids[i], 1, h);
   }
   // update m->scr
   for (i = 0; i < l; i++) {
     NumAddCVecDVec(w0, m->tar + ids[i] * N, 1, -1, N, w);
     NumVecAddCVec(w, b->ww + z[i] * N, 1, N);
+    // update m->scr
     ModelGdUpdate(m, 0, ids[i], 1, w);
   }
 }
 
-// update primal parameters offline (update m->tar)
-void PrimalUpdateOffline(struct Bookkeeping *b, struct Model *m) {
+void PrimalUpdateOffline(struct Bookkeeping* b, struct Model* m) {
+  // update primal parameters offline: update m->tar
+  // call before DualUpdateOffline
   int i, k;
   for (k = 0; k < K; k++) {
     for (i = 0; i < V; i++) {
@@ -113,16 +123,54 @@ void PrimalUpdateOffline(struct Bookkeeping *b, struct Model *m) {
   return;
 }
 
-void ThreadWork() {
-  struct Bookkeeping *b =
-      (struct Bookkeeping *)malloc(sizeof(struct Bookkeeping));
+void* ThreadWork(void* arg) {
+  int i, j, k;
+  int tid = (long)arg;
+  FILE* fin = fopen(V_TEXT_FILE_PATH, "rb");
+  if (!fin) {
+    LOG(0, "Error!");
+    exit(1);
+  }
+  fseek(fin, 0, SEEK_END);
+  long int fsz = ftell(fin);
+  long int fbeg = fsz / V_THREAD_NUM * tid;
+  long int fend = fsz / V_THREAD_NUM * (tid + 1);
+  // thread worker works sent_num sentences (sent_num) for iter iterations
+  struct Bookkeeping* b =
+      (struct Bookkeeping*)malloc(sizeof(struct Bookkeeping));
   b->dd = NumNewHugeVec(V * K);
   b->ent = NumNewHugeVec(K);
   b->ww = NumNewHugeVec(N * K);
   b->hh = NumNewHugeVec(N * K);
   b->hh = NumNewHugeVec(K);
-
-  return;
+  fseek(fin, fbeg, SEEK_SET);
+  int iter_num = 0, wids[SUP], wnum;
+  long long int online_cnt = 0;
+  long long int offline_int = V * offline_interval_vocab_ratio;
+  while (iter_num < V_ITER_NUM) {
+    wnum = TextReadSent(fin, vcb, wids, 1, 1);
+    online_cnt += wnum;
+    PrimalUpdateOnline(wids, wnum, b, model);
+    if (online_cnt >= offline_int) {
+      PrimalUpdateOffline(b, model);
+      DualUpateOffline(b, model);
+      online_cnt = 0;
+    }
+    if (feof(fin) || ftell(fin) >= fend) {
+      iter_num++;
+      fseek(fin, fbeg, SEEK_SET);
+    }
+  }
+  return 0;
 }
 
-int main(int argc, char *argv[]) { return 0; }
+void ScheduleWork() {
+  long long int tid;
+  vcb = TextLoadVocab(V_TEXT_VOCAB_PATH, -1, 0);
+  pthread_t* pt = (pthread_t*)malloc(V_THREAD_NUM * sizeof(pthread_t));
+  for (tid = 0; tid < V_THREAD_NUM; tid++) {
+    pthread_create(&pt[tid], NULL, ThreadWork, (void*)tid);
+  }
+}
+
+int main(int argc, char* argv[]) { return 0; }
