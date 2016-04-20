@@ -13,8 +13,6 @@
 #include "../utils/util_text.c"
 #include "variables.c"
 
-int N, K, V;
-
 // model parameter is shared across all threads
 struct Model {
   real* scr;  // source vector;
@@ -31,13 +29,53 @@ struct Bookkeeping {
 };
 real gd_ss;  // gradient descent step size
 
-// after this times vocabulary online updates, perform one offline update
-real offline_interval_vocab_ratio = 1.0;
+// current progress for each worker
+int* progress;
 
 // vocabulary
 struct Vocabulary* vcb;
 
-void ModelGdUpdate(struct Model* m, int p, int i, real c, real* g) {
+// some helper functions for debugging
+void PrintConfigInfo() {
+  LOG(1, "Input File: %s\n", V_TEXT_FILE_PATH);
+  LOG(1, "Vocab File: %s\n", V_TEXT_VOCAB_PATH);
+  LOG(1, "Thread Num: %d\n", V_THREAD_NUM);
+  LOG(1, "Iterations: %d\n", V_ITER_NUM);
+  LOG(1, "Offline interval / online update / vocabulary size: %lf\n",
+      (double)V_OFFLINE_INTERVAL_VOCAB_RATIO);
+  LOG(1, "Burn-in interval / online update / vocabulary size: %lf\n",
+      (double)V_BURN_IN_INTERVAL_VOCAB_RATIO);
+  return;
+}
+
+int preceed_newline_flag = 1;
+void ThreadPrintProgBar(int dbg_lvl, int tid) {
+  if (preceed_newline_flag)
+    LOG(dbg_lvl, "\n");
+  else
+    preceed_newline_flag = 0;
+  // print progress
+  int i, j = 0, pct, bar;
+  real p = 0;
+  for (i = 0; i < V_THREAD_NUM; i++) p += progress[i];
+  p /= (V_THREAD_NUM * V_ITER_NUM);
+  pct = p * 100;
+  bar = p * 80;
+  LOG(dbg_lvl, "[%3d%%]: ", pct);
+  for (i = 0; i < bar; i++) LOG(dbg_lvl, "+");
+  LOG(dbg_lvl, "~");
+  for (i = bar + 1; i < 80; i++) LOG(dbg_lvl, "=");
+  LOG(dbg_lvl, "\t(tid = %d", tid);
+  for (i = 0; i < V_THREAD_NUM; i++)
+    if (progress[i] < 0) j++;
+  if (j != 0)
+    LOG(dbg_lvl, "\t burn_in_left = %d)\r", j);
+  else
+    LOG(dbg_lvl, ")\r");
+  return;
+}
+
+void ModelGradUpdate(struct Model* m, int p, int i, real c, real* g) {
   // model update: p=0: scr; p=1: tar
   int j;
   if (p == 0) {
@@ -51,9 +89,9 @@ void ModelGdUpdate(struct Model* m, int p, int i, real c, real* g) {
 }
 
 int DualDecode(real* h, struct Bookkeeping* b) {
-  // fit the sentence with the best dual distribution
-  real s, t;
-  int z;
+  // fit the sentence with the best dual distribution (z)
+  real s = 0, t;
+  int z = 0;
   for (int k = 0; k < K; k++) {
     t = -NumVecDot(h, b->ww + k * N, N) - b->ent[k];
     if (k == 0 || s > t) {
@@ -63,29 +101,26 @@ int DualDecode(real* h, struct Bookkeeping* b) {
   }
   // update bookkeeping: hh, hn
   NumVecAddCVec(b->hh + z * N, h, 1.0, N);
-  b->hn++;
+  b->hn[z]++;
   return z;
 }
 
-void DualUpateOffline(struct Bookkeeping* b, struct Model* m) {
-  // update dual distributions and others
-  // update hh
-  for (int k = 0; k < K; k++) NumVecMulC(b->hh + k * N, 1.0 / b->hn[k], N);
-  for (int k = 0; k < K; k++) {
-    // update dd
-    for (int i = 0; i < V; i++) {
-      b->dd[k * V + i] = NumVecDot(m->tar + i * N, b->hh + k * N, N);
-    }
-    // normalize dd and update ent
-    b->ent[k] = NumSoftMax(b->dd + k * N, N);
-    // update ww
-    NumMulMatVec(m->tar, b->dd + k * V, N, V, b->ww + k * N);
+void DualUpdateOnline(int* ids, int l, struct Bookkeeping* b, struct Model* m) {
+  // dual decoding for one sentence -- this is used for burn in
+  int i;
+  real h0[NUP], h[NUP];
+  memset(h0, 0, N * sizeof(real));
+  for (i = 0; i < l; i++) NumVecAddCVec(h0, m->scr + ids[i] * N, 1, N);
+  // dual decode
+  for (i = 0; i < l; i++) {
+    NumAddCVecDVec(h0, m->scr + ids[i] * N, 1, -1, N, h);  // h
+    DualDecode(h, b);                                      // z
   }
   return;
 }
 
-void PrimalUpdateOnline(int* ids, int l, struct Bookkeeping* b,
-                        struct Model* m) {
+void PrimalDualUpdateOnline(int* ids, int l, struct Bookkeeping* b,
+                            struct Model* m) {
   // update primal parameters online for one sentence (ids)
   int i;
   real h0[NUP], h[NUP], w0[NUP], w[NUP];
@@ -100,14 +135,14 @@ void PrimalUpdateOnline(int* ids, int l, struct Bookkeeping* b,
     NumVecAddCVec(w0, m->tar + ids[i] * N, 1, N);          // w - ww
     NumVecAddCVec(w0, b->ww + z[i] * N, -1, N);
     // update m->tar (1st part, online update)
-    ModelGdUpdate(m, 1, ids[i], 1, h);
+    ModelGradUpdate(m, 1, ids[i], 1, h);
   }
   // update m->scr
   for (i = 0; i < l; i++) {
     NumAddCVecDVec(w0, m->tar + ids[i] * N, 1, -1, N, w);
     NumVecAddCVec(w, b->ww + z[i] * N, 1, N);
     // update m->scr
-    ModelGdUpdate(m, 0, ids[i], 1, w);
+    ModelGradUpdate(m, 0, ids[i], 1, w);
   }
 }
 
@@ -117,60 +152,134 @@ void PrimalUpdateOffline(struct Bookkeeping* b, struct Model* m) {
   int i, k;
   for (k = 0; k < K; k++) {
     for (i = 0; i < V; i++) {
-      ModelGdUpdate(m, 1, i, b->dd[k * V + i], b->hh + k * N);
+      ModelGradUpdate(m, 1, i, b->dd[k * V + i], b->hh + k * N);
     }
   }
   return;
 }
 
-void* ThreadWork(void* arg) {
-  int i, j, k;
-  int tid = (long)arg;
-  FILE* fin = fopen(V_TEXT_FILE_PATH, "rb");
-  if (!fin) {
-    LOG(0, "Error!");
-    exit(1);
+void DualUpateOffline(struct Bookkeeping* b, struct Model* m) {
+  // update dual distributions and others (b->dd,ww,ent)
+  // compute hh
+  for (int k = 0; k < K; k++) NumVecMulC(b->hh + k * N, 1.0 / b->hn[k], N);
+  for (int k = 0; k < K; k++) {
+    // update dd
+    for (int i = 0; i < V; i++) {
+      b->dd[k * V + i] = NumVecDot(m->tar + i * N, b->hh + k * N, N);
+    }
+    // normalize dd and update ent
+    b->ent[k] = NumSoftMax(b->dd + k * N, N);
+    // update ww
+    NumMulMatVec(m->tar, b->dd + k * V, N, V, b->ww + k * N);
   }
-  fseek(fin, 0, SEEK_END);
-  long int fsz = ftell(fin);
-  long int fbeg = fsz / V_THREAD_NUM * tid;
-  long int fend = fsz / V_THREAD_NUM * (tid + 1);
-  // thread worker works sent_num sentences (sent_num) for iter iterations
+  return;
+}
+
+void DualResetOffline(struct Bookkeeping* b) {
+  // dual model paramters reset (b->hh,hn)
+  NumFillValVec(b->hh, N * K, 0);
+  NumFillValIntVec(b->hn, K, 0);
+  return;
+}
+
+struct Bookkeeping* BookkeepingCreate() {
   struct Bookkeeping* b =
       (struct Bookkeeping*)malloc(sizeof(struct Bookkeeping));
   b->dd = NumNewHugeVec(V * K);
   b->ent = NumNewHugeVec(K);
   b->ww = NumNewHugeVec(N * K);
   b->hh = NumNewHugeVec(N * K);
-  b->hh = NumNewHugeVec(K);
-  fseek(fin, fbeg, SEEK_SET);
-  int iter_num = 0, wids[SUP], wnum;
+  b->hn = NumNewHugeIntVec(K);
+  NumFillValVec(b->hh, N * K, 0);
+  NumFillValIntVec(b->hn, K, 0);
+  NumFillValVec(b->ent, K, 0);
+  NumRandFillVec(b->ww, N * K, -1e-1, 1e-1);
+  NumFillValVec(b->dd, V * K, 1.0 / V);
+  return b;
+}
+
+void* ThreadWork(void* arg) {
+  int tid = (long)arg;
+  FILE* fin = fopen(V_TEXT_FILE_PATH, "rb");
+  if (!fin) {
+    LOG(0, "Error!\n");
+    exit(1);
+  }
+  fseek(fin, 0, SEEK_END);
+  long int fsz = ftell(fin);
+  long int fbeg = fsz / V_THREAD_NUM * tid;
+  long int fend = fsz / V_THREAD_NUM * (tid + 1);
+  struct Bookkeeping* b = BookkeepingCreate();
+  LOG(2, "*");
+  // burn in
+  int wids[SUP], wnum;
   long long int online_cnt = 0;
-  long long int offline_int = V * offline_interval_vocab_ratio;
-  while (iter_num < V_ITER_NUM) {
+  long long int offline_int = V * V_OFFLINE_INTERVAL_VOCAB_RATIO;
+  long long int burn_in_left = V * V_BURN_IN_INTERVAL_VOCAB_RATIO;
+  fseek(fin, fbeg, SEEK_SET);
+  while (burn_in_left > 0) {
     wnum = TextReadSent(fin, vcb, wids, 1, 1);
+    DualUpdateOnline(wids, wnum, b, model);
     online_cnt += wnum;
-    PrimalUpdateOnline(wids, wnum, b, model);
+    printf("%d, %lld\n", tid, online_cnt);
+    burn_in_left -= wnum;
     if (online_cnt >= offline_int) {
-      PrimalUpdateOffline(b, model);
+      // offline computation
       DualUpateOffline(b, model);
+      DualResetOffline(b);
       online_cnt = 0;
     }
     if (feof(fin) || ftell(fin) >= fend) {
-      iter_num++;
       fseek(fin, fbeg, SEEK_SET);
     }
   }
+  LOG(2, "$");
+  /* // training */
+  /* progress[tid] = 0; */
+  /* online_cnt = 0; */
+  /* fseek(fin, fbeg, SEEK_SET); */
+  /* printf("progress[tid]=%d, V_ITER_NUM=%d\n", progress[tid], V_ITER_NUM); */
+  /* while (progress[tid] < V_ITER_NUM) { */
+  /*   // online computation */
+  /*   wnum = TextReadSent(fin, vcb, wids, 1, 1); */
+  /*   PrimalDualUpdateOnline(wids, wnum, b, model); */
+  /*   online_cnt += wnum; */
+  /*   if (online_cnt >= offline_int) { */
+  /*     // offline computation */
+  /*     PrimalUpdateOffline(b, model); */
+  /*     DualUpateOffline(b, model); */
+  /*     DualResetOffline(b); */
+  /*     online_cnt = 0; */
+  /*     // debug info */
+  /*     ThreadPrintProgBar(2, tid); */
+  /*   } */
+  /*   if (feof(fin) || ftell(fin) >= fend) { */
+  /*     progress[tid]++; */
+  /*     fseek(fin, fbeg, SEEK_SET); */
+  /*   } */
+  /* } */
   return 0;
 }
 
 void ScheduleWork() {
   long long int tid;
+  VariableInit();
+  NumInit();
+  progress = (int*)malloc(V_THREAD_NUM * sizeof(int));
+  NumFillValIntVec(progress, V_THREAD_NUM, -1);
+  PrintConfigInfo();
   vcb = TextLoadVocab(V_TEXT_VOCAB_PATH, -1, 0);
+  LOG(2, "Threads spawning: ");
   pthread_t* pt = (pthread_t*)malloc(V_THREAD_NUM * sizeof(pthread_t));
   for (tid = 0; tid < V_THREAD_NUM; tid++) {
     pthread_create(&pt[tid], NULL, ThreadWork, (void*)tid);
   }
+  for (tid = 0; tid < V_THREAD_NUM; tid++) pthread_join(pt[tid], NULL);
+  LOG(2, "\n");
+  LOG(1, "Training finished\n");
 }
 
-int main(int argc, char* argv[]) { return 0; }
+int main(int argc, char* argv[]) {
+  ScheduleWork();
+  return 0;
+}

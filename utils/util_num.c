@@ -49,6 +49,18 @@ real NumExp(real x) {
     return NUM_EXP_TABLE[i];
 }
 
+unsigned long long int RANDOM_SEED = 0x0F0F0F0FL;
+real NumRand() {
+  RANDOM_SEED = ((RANDOM_SEED * 0x5DEECE66DL + 0x0A) & 0xFFFFFFFFFFFFL);
+  return ((real)RANDOM_SEED / ((real)0xFFFFFFFFFFFFL));
+}
+
+void NumRandFillVec(real *arr, int l, real lb, real ub) {
+  int i;
+  for (i = 0; i < l; i++) arr[i] = lb + NumRand() * (ub - lb);
+  return;
+}
+
 int NUM_MAX_PRINT_ELEM = 10;
 real NUM_EPS = 1e-6;
 
@@ -115,7 +127,16 @@ void NumPrintArrAbsMaxColor(char *name, real *arr, int l) {
 real *NumNewHugeVec(long long int elem_num) {
   real *ptr;
   if (posix_memalign((void **)&ptr, 128, elem_num * sizeof(real))) {
-    LOG(0, "[NumNewHugeVec]: memory allocation failed!");
+    LOG(0, "[NumNewHugeVec]: memory allocation failed!\n");
+    exit(1);
+  }
+  return ptr;
+}
+
+int *NumNewHugeIntVec(long long int elem_num) {
+  int *ptr;
+  if (posix_memalign((void **)&ptr, 128, elem_num * sizeof(int))) {
+    LOG(0, "[NumNewHugeVec]: memory allocation failed!\n");
     exit(1);
   }
   return ptr;
@@ -156,22 +177,22 @@ real NumVecCos(real *a, real *b, int l) {
          (NumVecNorm(b, l) + NUM_EPS);
 }
 
-// in place a <- a + c * b
 void NumVecAddCVec(real *a, real *b, real c, int l) {
+  // in place a <- a + c * b
   int i;
   for (i = 0; i < l; i++) a[i] += c * b[i];
   return;
 }
 
-// in place a <- c * a
 void NumVecMulC(real *a, real c, int l) {
+  // in place a <- c * a
   int i;
   for (i = 0; i < l; i++) a[i] *= c;
   return;
 }
 
-// x <- m * a; m: r * l, a: l
 void NumMulMatVec(real *m, real *a, int r, int l, real *x) {
+  // x <- m * a; m: r * l, a: l
   int i, j, k = 0;
   for (i = 0; i < r; i++) x[i] = 0;
   for (j = 0; j < l; j++)
@@ -179,14 +200,15 @@ void NumMulMatVec(real *m, real *a, int r, int l, real *x) {
   return;
 }
 
-// x <- c * a + d * b
 void NumAddCVecDVec(real *a, real *b, real c, real d, int l, real *x) {
+  // x <- c * a + d * b
   int i;
   for (i = 0; i < l; i++) x[i] = c * a[i] + d * b[i];
   return;
 }
 
-real NumSoftMax(real *a, int l) {  // return entropy
+real NumSoftMax(real *a, int l) {
+  // return entropy
   int i;
   real c = MAX(a, l);
   real s = 0, e = 0, t;
@@ -199,6 +221,17 @@ real NumSoftMax(real *a, int l) {  // return entropy
   for (i = 0; i < l; i++) a[i] /= s;
   e = -e / s + log(s);
   return e;
+}
+
+void NumFillValVec(real *a, int l, real v) {
+  int i;
+  for (i = 0; i < l; i++) a[i] = v;
+  return;
+}
+void NumFillValIntVec(int *a, int l, int v) {
+  int i;
+  for (i = 0; i < l; i++) a[i] = v;
+  return;
 }
 
 void NumInit() {

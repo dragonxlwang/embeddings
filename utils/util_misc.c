@@ -27,6 +27,7 @@
 
 int log_debug_mode = 2;
 
+// print only if log_dbg_level is small enough -- 0 being always printed
 #define LOG(log_dbg_level, ...)            \
   ({                                       \
     if (log_debug_mode >= log_dbg_level) { \

@@ -257,6 +257,7 @@ void TextSaveVocab(char* vcb_fp, struct Vocabulary* vcb) {
 }
 
 struct Vocabulary* TextLoadVocab(char* vcb_fp, int cap, int high_freq_cutoff) {
+  // cap: -1=no limit; high_freq_cutoff: first h_f_c number of words removed;
   int cnt, flag, id = 0;
   FILE* fin = fopen(vcb_fp, "rb");
   char s_word[TEXT_MAX_WORD_LEN], s_cnt[TEXT_MAX_WORD_LEN];
