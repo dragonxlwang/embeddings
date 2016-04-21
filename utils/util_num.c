@@ -14,6 +14,15 @@
 #define real double
 #endif
 
+// Parameters:
+//  NUM_EXP_TABLE_LEN          : exp table size
+//  NUM_EXP_HIGH               : exp table high end
+//  NUM_EXP_LOW                : exp table low end
+//  NUM_MAX_PRINT_ELEM         : number of printable element in an array
+//  NUM_EPS                    : machine precision
+// Init:
+//  NumInit()
+
 #define MAX(arr, l)                                        \
   ({                                                       \
     __typeof__(arr[0]) x = arr[0];                         \
@@ -38,7 +47,7 @@
   })
 
 #define NUM_EXP_TABLE_LEN 0xFFFFF
-real NUM_EXP_TABLE[0xFFFFF];
+real NUM_EXP_TABLE[NUM_EXP_TABLE_LEN];
 real NUM_EXP_HIGH = 1.0;
 real NUM_EXP_LOW = -15;
 real NumExp(real x) {

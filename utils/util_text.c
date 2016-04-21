@@ -7,6 +7,15 @@
 #include <string.h>
 #include "util_misc.c"
 
+// Parameters
+//  HASH_SLOTS        : at most this number of elements without crash
+//  TEXT_INIT_VCB_CAP : vocabulary initial size cap
+//  TEXT_MAX_WORD_LEN : maximal word length
+//  TEXT_MAX_SENT_WCT : maximal number of words in one sentence
+// Values
+//  TEXT_CORPUS_WORD_CNT  : corpus word count
+//  TEXT_CORPUS_FILE_SIZE : corpus file size
+
 ////////////////
 // Vocabulary //
 ////////////////

@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <pthread.h>
+#include <time.h>
 #include "../utils/util_misc.c"
 #include "../utils/util_num.c"
 #include "../utils/util_text.c"
@@ -30,10 +31,13 @@ struct Bookkeeping {
 real gd_ss;  // gradient descent step size
 
 // current progress for each worker
-int* progress;
+real* progress;
 
 // vocabulary
 struct Vocabulary* vcb;
+
+// start time
+clock_t start_clock_t;
 
 // some helper functions for debugging
 void PrintConfigInfo() {
@@ -45,38 +49,90 @@ void PrintConfigInfo() {
       (double)V_OFFLINE_INTERVAL_VOCAB_RATIO);
   LOG(1, "Burn-in interval / online update / vocabulary size: %lf\n",
       (double)V_BURN_IN_INTERVAL_VOCAB_RATIO);
+  LOG(1, "Initial Grad Descent Step Size: %lf\n",
+      (double)V_INIT_GRAD_DESCENT_STEP_SIZE);
   return;
 }
 
-int preceed_newline_flag = 1;
-void ThreadPrintProgBar(int dbg_lvl, int tid) {
-  if (preceed_newline_flag)
-    LOG(dbg_lvl, "\n");
-  else
-    preceed_newline_flag = 0;
-  // print progress
-  int i, j = 0, pct, bar;
+real GetProgress() {
+  int i;
   real p = 0;
   for (i = 0; i < V_THREAD_NUM; i++) p += progress[i];
   p /= (V_THREAD_NUM * V_ITER_NUM);
-  pct = p * 100;
-  bar = p * 80;
-  LOG(dbg_lvl, "[%3d%%]: ", pct);
+  return p;
+}
+
+int preceed_newline_flag = 1;
+int simple_ppb_lock = 0;
+void ThreadPrintProgBar(int dbg_lvl, int tid, real p) {
+  if (simple_ppb_lock) return;
+  simple_ppb_lock = 1;
+  if (preceed_newline_flag) {
+    LOG(dbg_lvl, "\n");
+    preceed_newline_flag = 0;
+  }
+  // print progress
+  int i, j = 0;
+  clock_t cur_clock_t = clock();
+  real pct = p * 100;
+  int bar = p * 80;
+  LOG(dbg_lvl, "[%7.4lf%%]: ", pct);
   for (i = 0; i < bar; i++) LOG(dbg_lvl, "+");
   LOG(dbg_lvl, "~");
   for (i = bar + 1; i < 80; i++) LOG(dbg_lvl, "=");
-  LOG(dbg_lvl, "\t(tid = %d", tid);
-  for (i = 0; i < V_THREAD_NUM; i++)
-    if (progress[i] < 0) j++;
-  if (j != 0)
-    LOG(dbg_lvl, "\t burn_in_left = %d)\r", j);
-  else
-    LOG(dbg_lvl, ")\r");
+  LOG(dbg_lvl, " (tid = %d)", tid);
+  double elapsed_time = (double)(cur_clock_t - start_clock_t) / CLOCKS_PER_SEC;
+  LOG(dbg_lvl, " time: %e / %e", elapsed_time, elapsed_time / V_THREAD_NUM);
+  LOG(dbg_lvl, " gdss: %e", gd_ss);
+  LOG(dbg_lvl, "                         \r");
+  simple_ppb_lock = 0;
+  return;
+}
+
+struct Bookkeeping* BookkeepingCreate() {
+  struct Bookkeeping* b =
+      (struct Bookkeeping*)malloc(sizeof(struct Bookkeeping));
+  b->dd = NumNewHugeVec(V * K);
+  b->ent = NumNewHugeVec(K);
+  b->ww = NumNewHugeVec(N * K);
+  b->hh = NumNewHugeVec(N * K);
+  b->hn = NumNewHugeIntVec(K);
+  NumFillValVec(b->hh, N * K, 0);
+  NumFillValIntVec(b->hn, K, 0);
+  NumFillValVec(b->ent, K, 0);
+  NumRandFillVec(b->ww, N * K, -1e-1, 1e-1);
+  NumFillValVec(b->dd, V * K, 1.0 / V);
+  return b;
+}
+
+void ModelInit() {
+  model = (struct Model*)malloc(sizeof(struct Model));
+  model->scr = NumNewHugeVec(V * N);
+  model->tar = NumNewHugeVec(V * N);
+  NumRandFillVec(model->scr, V * N, -1e-1, 1e-1);
+  NumRandFillVec(model->tar, V * N, -1e-1, 1e-1);
+  return;
+}
+
+void BookkeepingFree(struct Bookkeeping* b) {
+  free(b->dd);
+  free(b->ent);
+  free(b->ww);
+  free(b->hh);
+  free(b->hn);
+  free(b);
+  return;
+}
+
+void ModelFree() {
+  free(model->scr);
+  free(model->tar);
+  free(model);
   return;
 }
 
 void ModelGradUpdate(struct Model* m, int p, int i, real c, real* g) {
-  // model update: p=0: scr; p=1: tar
+  // model minimization update: p=0: scr; p=1: tar
   int j;
   if (p == 0) {
     // update scr
@@ -91,8 +147,8 @@ void ModelGradUpdate(struct Model* m, int p, int i, real c, real* g) {
 int DualDecode(real* h, struct Bookkeeping* b) {
   // fit the sentence with the best dual distribution (z)
   real s = 0, t;
-  int z = 0;
-  for (int k = 0; k < K; k++) {
+  int z = 0, k;
+  for (k = 0; k < K; k++) {
     t = -NumVecDot(h, b->ww + k * N, N) - b->ent[k];
     if (k == 0 || s > t) {
       s = t;
@@ -160,11 +216,12 @@ void PrimalUpdateOffline(struct Bookkeeping* b, struct Model* m) {
 
 void DualUpateOffline(struct Bookkeeping* b, struct Model* m) {
   // update dual distributions and others (b->dd,ww,ent)
+  int i, k;
   // compute hh
-  for (int k = 0; k < K; k++) NumVecMulC(b->hh + k * N, 1.0 / b->hn[k], N);
-  for (int k = 0; k < K; k++) {
+  for (k = 0; k < K; k++) NumVecMulC(b->hh + k * N, 1.0 / b->hn[k], N);
+  for (k = 0; k < K; k++) {
     // update dd
-    for (int i = 0; i < V; i++) {
+    for (i = 0; i < V; i++) {
       b->dd[k * V + i] = NumVecDot(m->tar + i * N, b->hh + k * N, N);
     }
     // normalize dd and update ent
@@ -182,22 +239,6 @@ void DualResetOffline(struct Bookkeeping* b) {
   return;
 }
 
-struct Bookkeeping* BookkeepingCreate() {
-  struct Bookkeeping* b =
-      (struct Bookkeeping*)malloc(sizeof(struct Bookkeeping));
-  b->dd = NumNewHugeVec(V * K);
-  b->ent = NumNewHugeVec(K);
-  b->ww = NumNewHugeVec(N * K);
-  b->hh = NumNewHugeVec(N * K);
-  b->hn = NumNewHugeIntVec(K);
-  NumFillValVec(b->hh, N * K, 0);
-  NumFillValIntVec(b->hn, K, 0);
-  NumFillValVec(b->ent, K, 0);
-  NumRandFillVec(b->ww, N * K, -1e-1, 1e-1);
-  NumFillValVec(b->dd, V * K, 1.0 / V);
-  return b;
-}
-
 void* ThreadWork(void* arg) {
   int tid = (long)arg;
   FILE* fin = fopen(V_TEXT_FILE_PATH, "rb");
@@ -206,6 +247,7 @@ void* ThreadWork(void* arg) {
     exit(1);
   }
   fseek(fin, 0, SEEK_END);
+  long int fpos;
   long int fsz = ftell(fin);
   long int fbeg = fsz / V_THREAD_NUM * tid;
   long int fend = fsz / V_THREAD_NUM * (tid + 1);
@@ -221,7 +263,6 @@ void* ThreadWork(void* arg) {
     wnum = TextReadSent(fin, vcb, wids, 1, 1);
     DualUpdateOnline(wids, wnum, b, model);
     online_cnt += wnum;
-    printf("%d, %lld\n", tid, online_cnt);
     burn_in_left -= wnum;
     if (online_cnt >= offline_int) {
       // offline computation
@@ -233,48 +274,59 @@ void* ThreadWork(void* arg) {
       fseek(fin, fbeg, SEEK_SET);
     }
   }
-  LOG(2, "$");
-  /* // training */
-  /* progress[tid] = 0; */
-  /* online_cnt = 0; */
-  /* fseek(fin, fbeg, SEEK_SET); */
-  /* printf("progress[tid]=%d, V_ITER_NUM=%d\n", progress[tid], V_ITER_NUM); */
-  /* while (progress[tid] < V_ITER_NUM) { */
-  /*   // online computation */
-  /*   wnum = TextReadSent(fin, vcb, wids, 1, 1); */
-  /*   PrimalDualUpdateOnline(wids, wnum, b, model); */
-  /*   online_cnt += wnum; */
-  /*   if (online_cnt >= offline_int) { */
-  /*     // offline computation */
-  /*     PrimalUpdateOffline(b, model); */
-  /*     DualUpateOffline(b, model); */
-  /*     DualResetOffline(b); */
-  /*     online_cnt = 0; */
-  /*     // debug info */
-  /*     ThreadPrintProgBar(2, tid); */
-  /*   } */
-  /*   if (feof(fin) || ftell(fin) >= fend) { */
-  /*     progress[tid]++; */
-  /*     fseek(fin, fbeg, SEEK_SET); */
-  /*   } */
-  /* } */
+  if (preceed_newline_flag) LOG(2, "$");
+  // training
+  int iter_num = 0;
+  online_cnt = 0;
+  fseek(fin, fbeg, SEEK_SET);
+  while (iter_num < V_ITER_NUM) {
+    // online computation
+    wnum = TextReadSent(fin, vcb, wids, 1, 1);
+    PrimalDualUpdateOnline(wids, wnum, b, model);
+    online_cnt += wnum;
+    if (online_cnt >= offline_int) {
+      // offline computation
+      PrimalUpdateOffline(b, model);
+      DualUpateOffline(b, model);
+      DualResetOffline(b);
+      online_cnt = 0;
+      // adjust gd_ss
+      real p = GetProgress();
+      gd_ss = V_INIT_GRAD_DESCENT_STEP_SIZE * (1 - p);
+      // debug info
+      ThreadPrintProgBar(2, tid, p);
+    }
+    // ftell cost running time roughly 15/14 times of an addition operation
+    fpos = ftell(fin);
+    progress[tid] = iter_num + (double)(fpos - fbeg) / (fend - fbeg);
+    if (feof(fin) || fpos >= fend) {
+      fseek(fin, fbeg, SEEK_SET);
+      iter_num++;
+    }
+  }
+  fclose(fin);
+  BookkeepingFree(b);
+  pthread_exit(NULL);
   return 0;
 }
 
 void ScheduleWork() {
   long long int tid;
+  start_clock_t = clock();
+  progress = (real*)malloc(V_THREAD_NUM * sizeof(real));
+  NumFillValVec(progress, V_THREAD_NUM, 0);
   VariableInit();
   NumInit();
-  progress = (int*)malloc(V_THREAD_NUM * sizeof(int));
-  NumFillValIntVec(progress, V_THREAD_NUM, -1);
+  vcb = TextLoadVocab(V_TEXT_VOCAB_PATH, V, 0);
+  V = vcb->size;
+  ModelInit();
   PrintConfigInfo();
-  vcb = TextLoadVocab(V_TEXT_VOCAB_PATH, -1, 0);
   LOG(2, "Threads spawning: ");
   pthread_t* pt = (pthread_t*)malloc(V_THREAD_NUM * sizeof(pthread_t));
-  for (tid = 0; tid < V_THREAD_NUM; tid++) {
+  for (tid = 0; tid < V_THREAD_NUM; tid++)
     pthread_create(&pt[tid], NULL, ThreadWork, (void*)tid);
-  }
   for (tid = 0; tid < V_THREAD_NUM; tid++) pthread_join(pt[tid], NULL);
+  ModelFree();
   LOG(2, "\n");
   LOG(1, "Training finished\n");
 }

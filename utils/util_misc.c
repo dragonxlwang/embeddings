@@ -6,6 +6,9 @@
 #include <stdlib.h>
 #include <string.h>
 
+// Parameters:
+//  log_debug_mode        : debug mode 0 print only error, 2 print all
+
 #define ANSI_COLOR_WHITE "\x1b[00m"
 #define ANSI_COLOR_BLACK "\x1b[30m"
 #define ANSI_COLOR_RED "\x1b[31m"
