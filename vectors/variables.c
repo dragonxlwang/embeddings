@@ -1,10 +1,14 @@
 #ifndef VARIABLES
 #define VARIABLES
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include "../utils/util_file.c"
 #include "../utils/util_num.c"
 #include "../utils/util_text.c"
-#include <string.h>
+#include "../utils/util_misc.c"
+
 // The following parameters are set in order to have variables on stack
 #define NUP 200      // upper bound for N  (embedding dimension)
 #define KUP 200      // upper bound for K  (dual dimension)
@@ -13,6 +17,7 @@
 
 char *V_TEXT_FILE_PATH = "~/data/gigaword/giga_nyt.txt";
 char *V_TEXT_VOCAB_PATH = NULL;  // don't set it if can be inferred from above
+char *V_MODEL_SAVE_PATH = NULL;
 int V_THREAD_NUM = 20;
 int V_ITER_NUM = 10;
 // every this number times vocabulary online updates perform one offline update
@@ -21,6 +26,10 @@ real V_OFFLINE_INTERVAL_VOCAB_RATIO = 1.0;
 real V_BURN_IN_INTERVAL_VOCAB_RATIO = 5;
 // Initial grad descent step size
 real V_INIT_GRAD_DESCENT_STEP_SIZE = 1e-2;
+// Vocab loading option: cut-off high frequent (stop) words
+int V_VOCAB_HIGH_FREQ_CUTOFF = 0;
+// if cache model per iteration
+int CACHE_INTERMEDIATE_MODEL = 1;
 // Dimension for embedding, number of dual cluster, vocabulary size cap
 int N = 100;
 int K = 100;
@@ -32,8 +41,36 @@ void VariableInit() {
   V_TEXT_FILE_PATH = FilePathExpand(V_TEXT_FILE_PATH);
   if (!V_TEXT_VOCAB_PATH)
     V_TEXT_VOCAB_PATH = FilePathSubExtension(V_TEXT_FILE_PATH, "vcb");
+  else
+    V_TEXT_VOCAB_PATH = FilePathExpand(V_TEXT_VOCAB_PATH);
+  if (!V_MODEL_SAVE_PATH)
+    V_MODEL_SAVE_PATH = FilePathSubExtension(V_TEXT_FILE_PATH, "mdl");
+  else
+    V_MODEL_SAVE_PATH = FilePathExpand(V_MODEL_SAVE_PATH);
   // define util_text constant variables
   TEXT_MAX_SENT_WCT = SUP;
+}
+
+void PrintConfigInfo() {
+  LOG(1, "Input File: %s\n", V_TEXT_FILE_PATH);
+  LOG(1, "Vocab File: %s\n", V_TEXT_VOCAB_PATH);
+  LOG(1, "Thread Num: %d\n", V_THREAD_NUM);
+  LOG(1, "Iterations: %d\n", V_ITER_NUM);
+  LOG(1, "Offline interval / online update / vocabulary size: %lf\n",
+      (double)V_OFFLINE_INTERVAL_VOCAB_RATIO);
+  LOG(1, "Burn-in interval / online update / vocabulary size: %lf\n",
+      (double)V_BURN_IN_INTERVAL_VOCAB_RATIO);
+  LOG(1, "Initial Grad Descent Step Size                    : %lf\n",
+      (double)V_INIT_GRAD_DESCENT_STEP_SIZE);
+  LOG(1, "Vocabulary high-freq words cut-off                : %d\n",
+      V_VOCAB_HIGH_FREQ_CUTOFF);
+  LOG(1, "Cache intermediate models                         : %d\n",
+      CACHE_INTERMEDIATE_MODEL);
+  LOG(1, "Dimension N: %d\n", N);
+  LOG(1, "Dimension K: %d\n", K);
+  LOG(1, "Dimension V: %d\n", V);
+  LOG()
+  return;
 }
 
 #endif /* ifndef CONSTANTS */

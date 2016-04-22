@@ -40,20 +40,6 @@ struct Vocabulary* vcb;
 clock_t start_clock_t;
 
 // some helper functions for debugging
-void PrintConfigInfo() {
-  LOG(1, "Input File: %s\n", V_TEXT_FILE_PATH);
-  LOG(1, "Vocab File: %s\n", V_TEXT_VOCAB_PATH);
-  LOG(1, "Thread Num: %d\n", V_THREAD_NUM);
-  LOG(1, "Iterations: %d\n", V_ITER_NUM);
-  LOG(1, "Offline interval / online update / vocabulary size: %lf\n",
-      (double)V_OFFLINE_INTERVAL_VOCAB_RATIO);
-  LOG(1, "Burn-in interval / online update / vocabulary size: %lf\n",
-      (double)V_BURN_IN_INTERVAL_VOCAB_RATIO);
-  LOG(1, "Initial Grad Descent Step Size: %lf\n",
-      (double)V_INIT_GRAD_DESCENT_STEP_SIZE);
-  return;
-}
-
 real GetProgress() {
   int i;
   real p = 0;
@@ -114,7 +100,17 @@ void ModelInit() {
   return;
 }
 
-void ModelSave(char* mfp) { int i = 0; }
+void ModelSave(char* mfp) {
+  int i = 0;
+  FILE* fout = fopen(mfp, "wb");
+  if (!fout) {
+    LOG(0, "Error!\n");
+    exit(1);
+  }
+  fwrite(model->scr, sizeof(real), V * N, fout);
+  fwrite(model->tar, sizeof(real), V * N, fout);
+  return;
+}
 
 void BookkeepingFree(struct Bookkeeping* b) {
   free(b->dd);
