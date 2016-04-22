@@ -72,7 +72,7 @@ void ThreadPrintProgBar(int dbg_lvl, int tid, real p) {
     preceed_newline_flag = 0;
   }
   // print progress
-  int i, j = 0;
+  int i;
   clock_t cur_clock_t = clock();
   real pct = p * 100;
   int bar = p * 80;
@@ -113,6 +113,8 @@ void ModelInit() {
   NumRandFillVec(model->tar, V * N, -1e-1, 1e-1);
   return;
 }
+
+void ModelSave(char* mfp) { int i = 0; }
 
 void BookkeepingFree(struct Bookkeeping* b) {
   free(b->dd);
