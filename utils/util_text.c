@@ -233,7 +233,7 @@ struct Vocabulary* TextBuildVocab(char* text_file_path, int if_norm_word,
       VocabAdd(vcb, str, 1);
       TEXT_CORPUS_WORD_CNT++;
       if ((TEXT_CORPUS_WORD_CNT & 0xFFFFF) == 0xFFFFF)
-        LOG(2, "[TextBuildVocab]: reading %lld [*2^20 | M] word \33[2K\r",
+        LOG(2, "\33[2K\r[TextBuildVocab]: reading %lld [*2^20 | M] word",
             TEXT_CORPUS_WORD_CNT >> 20);
     }
     if (flag == 2) break;

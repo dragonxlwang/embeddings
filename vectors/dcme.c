@@ -62,14 +62,14 @@ void ThreadPrintProgBar(int dbg_lvl, int tid, real p) {
   clock_t cur_clock_t = clock();
   real pct = p * 100;
   int bar = p * 80;
-  LOG(dbg_lvl, "[%7.4lf%%]: ", pct);
+  LOG(dbg_lvl, "\33[2K\r[%7.4lf%%]: ", pct);
   for (i = 0; i < bar; i++) LOG(dbg_lvl, "+");
   LOG(dbg_lvl, "~");
   for (i = bar + 1; i < 80; i++) LOG(dbg_lvl, "=");
   LOG(dbg_lvl, " (tid = %d)", tid);
   double elapsed_time = (double)(cur_clock_t - start_clock_t) / CLOCKS_PER_SEC;
   LOG(dbg_lvl, " time: %e / %e", elapsed_time, elapsed_time / V_THREAD_NUM);
-  LOG(dbg_lvl, " gdss: %e \33[2K\r", gd_ss);
+  LOG(dbg_lvl, " gdss: %e", gd_ss);
   simple_ppb_lock = 0;
   return;
 }
