@@ -53,7 +53,7 @@ void PrintConfigInfo() {
   LOG(1, "Dimension N: %d\n", N);
   LOG(1, "Dimension K: %d\n", K);
   LOG(1, "Dimension V: %d\n", V);
-  LOG(1, "Sanity Checks:");
+  LOG(1, "Sanity Checks:\n");
   int x = 0;
   x = (NUP > N);
   LOG(1, "        NUP > N: %s (%d > %d)\n", x == 1 ? "yes" : "no", NUP, N);
