@@ -5,9 +5,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include "../utils/util_file.c"
+#include "../utils/util_misc.c"
 #include "../utils/util_num.c"
 #include "../utils/util_text.c"
-#include "../utils/util_misc.c"
 
 // The following parameters are set in order to have variables on stack
 #define NUP 200      // upper bound for N  (embedding dimension)
@@ -35,22 +35,6 @@ int N = 100;
 int K = 100;
 int V = 100000;  // set to -1 if no limit
 
-// always call this function before work
-void VariableInit() {
-  // expand file paths
-  V_TEXT_FILE_PATH = FilePathExpand(V_TEXT_FILE_PATH);
-  if (!V_TEXT_VOCAB_PATH)
-    V_TEXT_VOCAB_PATH = FilePathSubExtension(V_TEXT_FILE_PATH, "vcb");
-  else
-    V_TEXT_VOCAB_PATH = FilePathExpand(V_TEXT_VOCAB_PATH);
-  if (!V_MODEL_SAVE_PATH)
-    V_MODEL_SAVE_PATH = FilePathSubExtension(V_TEXT_FILE_PATH, "mdl");
-  else
-    V_MODEL_SAVE_PATH = FilePathExpand(V_MODEL_SAVE_PATH);
-  // define util_text constant variables
-  TEXT_MAX_SENT_WCT = SUP;
-}
-
 void PrintConfigInfo() {
   LOG(1, "Input File: %s\n", V_TEXT_FILE_PATH);
   LOG(1, "Vocab File: %s\n", V_TEXT_VOCAB_PATH);
@@ -69,7 +53,44 @@ void PrintConfigInfo() {
   LOG(1, "Dimension N: %d\n", N);
   LOG(1, "Dimension K: %d\n", K);
   LOG(1, "Dimension V: %d\n", V);
-  LOG()
+  LOG(1, "Sanity Checks:");
+  int x = 0;
+  x = (NUP > N);
+  LOG(1, "        NUP > N: %s (%d > %d)\n", x == 1 ? "yes" : "no", NUP, N);
+  if (x == 0) {
+    LOG(0, "fail!");
+    exit(1);
+  }
+  x = (KUP > K);
+  LOG(1, "        KUP > K: %s (%d > %d)\n", x == 1 ? "yes" : "no", KUP, K);
+  if (x == 0) {
+    LOG(0, "fail!");
+    exit(1);
+  }
+  x = (VUP > V);
+  LOG(1, "        VUP > V: %s (%d > %d)\n", x == 1 ? "yes" : "no", VUP, V);
+  if (x == 0) {
+    LOG(0, "fail!");
+    exit(1);
+  }
+  return;
+}
+
+// always call this function before work
+void VariableInit() {
+  // expand file paths
+  V_TEXT_FILE_PATH = FilePathExpand(V_TEXT_FILE_PATH);
+  if (!V_TEXT_VOCAB_PATH)
+    V_TEXT_VOCAB_PATH = FilePathSubExtension(V_TEXT_FILE_PATH, "vcb");
+  else
+    V_TEXT_VOCAB_PATH = FilePathExpand(V_TEXT_VOCAB_PATH);
+  if (!V_MODEL_SAVE_PATH)
+    V_MODEL_SAVE_PATH = FilePathSubExtension(V_TEXT_FILE_PATH, "mdl");
+  else
+    V_MODEL_SAVE_PATH = FilePathExpand(V_MODEL_SAVE_PATH);
+  // define util_text constant variables
+  TEXT_MAX_SENT_WCT = SUP;
+  PrintConfigInfo();
   return;
 }
 

@@ -4,10 +4,10 @@
 //////////////////////////////////////////////////////////////////
 
 #include <math.h>
+#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <pthread.h>
 #include <time.h>
 #include "../utils/util_misc.c"
 #include "../utils/util_num.c"
@@ -18,7 +18,7 @@
 struct Model {
   real* scr;  // source vector;
   real* tar;  // target vector;
-}* model;
+} * model;
 
 // each thread worker maintains a bookkeeping
 struct Bookkeeping {
@@ -69,8 +69,7 @@ void ThreadPrintProgBar(int dbg_lvl, int tid, real p) {
   LOG(dbg_lvl, " (tid = %d)", tid);
   double elapsed_time = (double)(cur_clock_t - start_clock_t) / CLOCKS_PER_SEC;
   LOG(dbg_lvl, " time: %e / %e", elapsed_time, elapsed_time / V_THREAD_NUM);
-  LOG(dbg_lvl, " gdss: %e", gd_ss);
-  LOG(dbg_lvl, "                         \r");
+  LOG(dbg_lvl, " gdss: %e \33[2K\r", gd_ss);
   simple_ppb_lock = 0;
   return;
 }
@@ -100,8 +99,11 @@ void ModelInit() {
   return;
 }
 
-void ModelSave(char* mfp) {
-  int i = 0;
+int save_iter_num = -1;
+void ModelSave(int iter_num) {
+  if (iter_num <= save_iter_num) return;  // avoid thread racing by simple lock
+  save_iter_num = iter_num;
+  char* mfp = sformat("%s.part%d", V_MODEL_SAVE_PATH, iter_num);
   FILE* fout = fopen(mfp, "wb");
   if (!fout) {
     LOG(0, "Error!\n");
@@ -109,6 +111,8 @@ void ModelSave(char* mfp) {
   }
   fwrite(model->scr, sizeof(real), V * N, fout);
   fwrite(model->tar, sizeof(real), V * N, fout);
+  fclose(fout);
+  free(mfp);
   return;
 }
 
@@ -299,6 +303,7 @@ void* ThreadWork(void* arg) {
     progress[tid] = iter_num + (double)(fpos - fbeg) / (fend - fbeg);
     if (feof(fin) || fpos >= fend) {
       fseek(fin, fbeg, SEEK_SET);
+      ModelSave(iter_num);
       iter_num++;
     }
   }
@@ -316,15 +321,17 @@ void ScheduleWork() {
   VariableInit();
   NumInit();
   vcb = TextLoadVocab(V_TEXT_VOCAB_PATH, V, 0);
+  // overwrite V by actual vocabulary size
   V = vcb->size;
+  LOG(1, "Actual V: %d\n", V);
   ModelInit();
-  PrintConfigInfo();
   LOG(2, "Threads spawning: ");
   pthread_t* pt = (pthread_t*)malloc(V_THREAD_NUM * sizeof(pthread_t));
   for (tid = 0; tid < V_THREAD_NUM; tid++)
     pthread_create(&pt[tid], NULL, ThreadWork, (void*)tid);
   for (tid = 0; tid < V_THREAD_NUM; tid++) pthread_join(pt[tid], NULL);
   ModelFree();
+  VocabDestroy(vcb);
   LOG(2, "\n");
   LOG(1, "Training finished\n");
 }

@@ -22,12 +22,6 @@
 
 int HASH_SLOTS = 0xFFFFF;  // around 1M slots by default
 
-#define STR_CLONE(d, s)                                \
-  ({                                                   \
-    d = (char*)malloc((strlen(s) + 1) * sizeof(char)); \
-    strcpy(d, s);                                      \
-  })
-
 // BKDR Hash for string
 int GetStrHash(char* str) {
   unsigned long long h = 0;
@@ -223,7 +217,7 @@ int TextNormWord(char* str, int if_lower, int if_rm_trail_punc) {
 
 struct Vocabulary* TextBuildVocab(char* text_file_path, int if_norm_word,
                                   int cap) {
-  char* str = (char*)malloc(TEXT_MAX_WORD_LEN);
+  char str[TEXT_MAX_WORD_LEN];
   int flag = 0;
   struct Vocabulary* vcb = VocabCreate(TEXT_INIT_VCB_CAP);
   FILE* fin = fopen(text_file_path, "rb");
@@ -239,7 +233,7 @@ struct Vocabulary* TextBuildVocab(char* text_file_path, int if_norm_word,
       VocabAdd(vcb, str, 1);
       TEXT_CORPUS_WORD_CNT++;
       if ((TEXT_CORPUS_WORD_CNT & 0xFFFFF) == 0xFFFFF)
-        LOG(2, "[TextBuildVocab]: reading %lld [*2^20 | M] word\r",
+        LOG(2, "[TextBuildVocab]: reading %lld [*2^20 | M] word \33[2K\r",
             TEXT_CORPUS_WORD_CNT >> 20);
     }
     if (flag == 2) break;
@@ -295,7 +289,7 @@ struct Vocabulary* TextLoadVocab(char* vcb_fp, int cap, int high_freq_cutoff) {
 
 int TextReadSent(FILE* fin, struct Vocabulary* vcb, int* word_ids,
                  int if_norm_word, int till_line_end) {
-  char* str = (char*)malloc(TEXT_MAX_WORD_LEN);
+  char str[TEXT_MAX_WORD_LEN];
   int flag1, flag2 = 0, id;
   int word_num = 0;
   while (1) {
