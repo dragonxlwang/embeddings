@@ -112,6 +112,8 @@ char *vsformatc(char fg_color_code, char bg_color_code, const char *fmt,
     case 'l':
       fg = ANSI_COLOR_LGRAY;
       break;
+    default:
+      exit(1);
   }
   switch (b) {
     case 'k':
@@ -138,6 +140,8 @@ char *vsformatc(char fg_color_code, char bg_color_code, const char *fmt,
     case 'l':
       bg = ANSI_COLOR_BG_LGRAY;
       break;
+    default:
+      exit(1);
   }
   char s[0x1000];
   char *ss;
