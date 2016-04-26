@@ -197,7 +197,8 @@ void PrimalDualUpdateOnline(int* ids, int l, struct Bookkeeping* b,
     double norm_before = NumVecNorm(m->tar + ids[i] * N, N);
     ModelGradUpdate(m, 1, ids[i], -1, h);
     double norm_after = NumVecNorm(m->tar + ids[i] * N, N);
-    printf("%lf=>%lf (%lf)", norm_before, norm_after, norm_after - norm_before);
+    printf("%lf=>%lf (%lf)\n", norm_before, norm_after,
+           norm_after - norm_before);
   }
   // update m->scr
   for (i = 0; i < l; i++) {
