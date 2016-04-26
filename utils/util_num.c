@@ -229,7 +229,7 @@ real NumSoftMax(real *a, int l) {
   }
   for (i = 0; i < l; i++) a[i] /= s;
   e = -e / s + log(s);
-  printf("%lf\n", e);
+  printf("entropy: %lf\n", e);
   return e;
 }
 
