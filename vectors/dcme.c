@@ -135,6 +135,7 @@ void ModelFree() {
 
 void ModelGradUpdate(struct Model* m, int p, int i, real c, real* g) {
   // model minimization update: p=0: scr; p=1: tar
+  // use c = +/- 1 to reverse optimization direction
   int j;
   if (p == 0) {
     // update scr
@@ -193,19 +194,23 @@ void PrimalDualUpdateOnline(int* ids, int l, struct Bookkeeping* b,
     NumVecAddCVec(w0, m->tar + ids[i] * N, 1, N);          // w - ww
     NumVecAddCVec(w0, b->ww + z[i] * N, -1, N);
     // update m->tar (1st part, online update)
-    ModelGradUpdate(m, 1, ids[i], 1, h);
+    double norm_before = NumVecNorm(m->tar + ids[i] * N, N);
+    ModelGradUpdate(m, 1, ids[i], -1, h);
+    double norm_after = NumVecNorm(m->tar + ids[i] * N, N);
+    printf("%lf=>%lf (%lf)", norm_before, norm_after, norm_after - norm_before);
   }
   // update m->scr
   for (i = 0; i < l; i++) {
     NumAddCVecDVec(w0, m->tar + ids[i] * N, 1, -1, N, w);
     NumVecAddCVec(w, b->ww + z[i] * N, 1, N);
     // update m->scr
-    ModelGradUpdate(m, 0, ids[i], 1, w);
+    ModelGradUpdate(m, 0, ids[i], -1, w);
   }
 }
 
 void PrimalUpdateOffline(struct Bookkeeping* b, struct Model* m) {
-  // update primal parameters offline: update m->tar
+  // update primal parameters offline: update m->tar (substitute negative
+  // sampling)
   // call before DualUpdateOffline
   int i, k;
   for (k = 0; k < K; k++) {

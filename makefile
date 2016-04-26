@@ -1,24 +1,39 @@
 SHELL := /bin/bash
 CC = gcc
+DEBUG ?= 0
+
+
 #Using -Ofast instead of -O3 might result in faster code,
 #but is supported only by newer GCC versions
-CFLAGS = -std=gnu99 -lm -pthread -O3 -march=native -Wall -funroll-loops \
-				 -Wno-unused-variable
-DBGFLAGS = -lm -pthread -O0 -g3
+ifeq ($(DEBUG), 0)
+	CFLAGS = -std=gnu99 -lm -pthread -O3 -march=native -Wall -funroll-loops \
+					 -Wno-unused-variable
+	DIR = bin
+else
+	CFLAGS = -lm -pthread -O0 -g3 -DDEBUG
+	DIR = debug
+endif
 
-all 	: clean dcme run
+%: %.c
+	@echo -en "\033[1;31m"; printf '==== (RE)MAKE '; printf '=%.0s' {1..66};
+	@echo -e "\033[0m"
 
-dcme 	:	vectors/dcme.c
-	$(CC) vectors/dcme.c -o bin/dcme $(CFLAGS)
-debug : vectors/dcme.c
-	$(CC) vectors/dcme.c -o bin/dcme $(DBGFLAGS)
-run		:
-	@echo -en "\033[1;36m"; printf '==== RUN'; echo -e "\033[0m"
+	-rm -f $(DIR)/$@
+	mkdir -p $(dir $(DIR)/$@)
+	$(CC) $< -o $(DIR)/$@ $(CFLAGS)
+
+	$(eval STR_LENGTH :=  $(shell echo $(DIR)/$@ | wc -m))
+	$(eval STR_LENGTH :=  $(shell echo 70 - $(STR_LENGTH) | bc))
+	@echo -en "\033[1;36m"; printf '==== RUN: '; echo -n "$(DIR)/$@ "
+	@printf '=%.0s' {1..$(STR_LENGTH)}; echo -e "\033[0m"
+
+	@./$(DIR)/$@
+
 	@echo -en "\033[1;36m"; printf '=%.0s' {1..80}; echo -e "\033[0m"
-	@./bin/dcme
-	@echo -en "\033[1;36m"; printf '=%.0s' {1..80}; echo -e "\033[0m"
-prelude :
-	@echo -en "\033[1;33m"; printf '*%.0s' {1..80}; echo -e "\033[0m"
-	@echo -en "\033[1;31m"; printf '==== REMOVE AND MAKE'; echo -e "\033[0m"
-clean		: prelude
-	rm -rf ./bin/dcme
+clean:
+	rm -rf $(DIR)/*
+
+# $@ The name of the target file (the one before the colon)
+# $< The name of the first (or only) prerequisite file
+# $^ The names of all the prerequisite files (space separated)
+# $* The stem (the bit which matches the % wildcard in the rule definition.
