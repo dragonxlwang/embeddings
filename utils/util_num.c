@@ -82,7 +82,7 @@ void NumPrintArr(char *name, real *arr, int l) {
     else
       name10[i] = ' ';
   }
-  printf("%10s: ", name10);
+  printfc('g', 'k', "%10s: ", name10);
   for (i = 0; i < l; i++)
     if (i < NUM_MAX_PRINT_ELEM - 2 || l - i <= 2) {
       if (-NUM_EPS <= arr[i] && arr[i] <= NUM_EPS)
@@ -151,10 +151,34 @@ int *NumNewHugeIntVec(long long int elem_num) {
   return ptr;
 }
 
+real *NumCLoneHugeVec(real *vec, long long int elem_num) {
+  real *ptr = NumNewHugeVec(elem_num);
+  memcpy(ptr, vec, elem_num * sizeof(real));
+  return ptr;
+}
+
+int *NumCLoneHugeIntVec(int *vec, long long int elem_num) {
+  int *ptr = NumNewHugeIntVec(elem_num);
+  memcpy(ptr, vec, elem_num * sizeof(int));
+  return ptr;
+}
+
+real *NumCloneVec(real *vec, int elem_num) {
+  real *ptr = malloc(elem_num * sizeof(real));
+  memcpy(ptr, vec, elem_num * sizeof(real));
+  return ptr;
+}
+
+int *NumCloneIntVec(int *vec, int elem_num) {
+  int *ptr = malloc(elem_num * sizeof(int));
+  memcpy(ptr, vec, elem_num * sizeof(int));
+  return ptr;
+}
+
 void NumReadVec(real *ptr, long long int elem_num, FILE *fin) {
   long long int actual_read_size = fread(ptr, sizeof(real), elem_num, fin);
   if (actual_read_size != elem_num) {
-    printf("[NumReadVec]: read error!");
+    LOG(0, "[NumReadVec]: read error!");
     exit(1);
   }
   return;
@@ -222,14 +246,14 @@ real NumSoftMax(real *a, int l) {
   real c = MAX(a, l);
   real s = 0, e = 0, t;
   for (i = 0; i < l; i++) {
-    t = NumExp(a[i] - c);
+    a[i] -= c;
+    t = NumExp(a[i]);
     e += t * a[i];
+    s += t;
     a[i] = t;
-    s += a[i];
   }
   for (i = 0; i < l; i++) a[i] /= s;
   e = -e / s + log(s);
-  printf("entropy: %lf\n", e);
   return e;
 }
 
@@ -238,10 +262,25 @@ void NumFillValVec(real *a, int l, real v) {
   for (i = 0; i < l; i++) a[i] = v;
   return;
 }
+
 void NumFillValIntVec(int *a, int l, int v) {
   int i;
   for (i = 0; i < l; i++) a[i] = v;
   return;
+}
+
+real NumSumVec(real *a, int l) {
+  int i;
+  real s = 0;
+  for (i = 0; i < l; i++) s += a[i];
+  return s;
+}
+
+int NumSumIntVec(int *a, int l) {
+  int i;
+  int s = 0;
+  for (i = 0; i < l; i++) s += a[i];
+  return s;
 }
 
 void NumInit() {

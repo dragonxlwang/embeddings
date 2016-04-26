@@ -65,7 +65,7 @@ char *sconcat(char *sa, char *sb, int la, int lb) {
 
 char *sformat(char *fmt, ...) {
   // sort of like sprintf, but allocate string with malloc. max length 4096
-  char s[0x1000];
+  char s[0x1000] = {0};
   char *ss;
   va_list al;
   va_start(al, fmt);
@@ -143,7 +143,7 @@ char *vsformatc(char fg_color_code, char bg_color_code, const char *fmt,
     default:
       exit(1);
   }
-  char s[0x1000];
+  char s[0x1000] = {0};
   char *ss;
   strcat(s, fg);
   strcat(s, bg);
