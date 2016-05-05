@@ -7,9 +7,21 @@
 #include <string.h>
 
 // util_misc.c shall not include other util_XXXX files but can be included
+// sid_module_name prefix indicate functions/variables shall not be accessed
+//    directly; for variables, a suffix '_' is used.
 // Parameters:
 //  log_debug_mode        : debug mode 0 print only error, 2 print all
 
+/***
+ *      #####
+ *     #     # ##### #####  # #    #  ####
+ *     #         #   #    # # ##   # #    #
+ *      #####    #   #    # # # #  # #
+ *           #   #   #####  # #  # # #  ###
+ *     #     #   #   #   #  # #   ## #    #
+ *      #####    #   #    # # #    #  ####
+ *
+ */
 // w k r g y b m c l
 #define ANSI_COLOR_WHITE "\x1b[00m"
 #define ANSI_COLOR_BLACK "\x1b[30m"
@@ -37,6 +49,13 @@ int log_debug_mode = 2;
   ({                                       \
     if (log_debug_mode >= log_dbg_level) { \
       printf(__VA_ARGS__);                 \
+      fflush(stdout);                      \
+    }                                      \
+  })
+#define LOGC(log_dbg_level, ...)           \
+  ({                                       \
+    if (log_debug_mode >= log_dbg_level) { \
+      printfc(__VA_ARGS__);                \
       fflush(stdout);                      \
     }                                      \
   })
@@ -171,4 +190,160 @@ void printfc(char fg_color_code, char bg_color_code, const char *fmt, ...) {
   return;
 }
 
+/***
+ *        #
+ *       # #   #       ####   ####  #####  # ##### #    # #    #
+ *      #   #  #      #    # #    # #    # #   #   #    # ##  ##
+ *     #     # #      #      #    # #    # #   #   ###### # ## #
+ *     ####### #      #  ### #    # #####  #   #   #    # #    #
+ *     #     # #      #    # #    # #   #  #   #   #    # #    #
+ *     #     # ######  ####   ####  #    # #   #   #    # #    #
+ *
+ */
+#ifndef real
+#define real double
+#endif
+
+#define SWAP(x, y)       \
+  ({                     \
+    __typeof__(x) z = x; \
+    x = y;               \
+    y = z;               \
+  })
+
+int sign(real x) { return (x == 0 ? 0 : (x < 0 ? -1 : 1)); }
+int signi(int x) { return (x == 0 ? 0 : (x < 0 ? -1 : 1)); }
+
+void range(int *idx, int size) {
+  int i;
+  for (i = 0; i < size; i++) idx[i] = i;
+  return;
+}
+
+typedef struct pair {
+  int key;
+  real val;
+} pair;
+pair *array2tuples(real *arr, int size) {
+  int i;
+  pair *p = (pair *)malloc(sizeof(pair) * size);
+  for (i = 0; i < size; i++) {
+    p[i].key = i;
+    p[i].val = arr[i];
+  }
+  return p;
+}
+pair *array2tuplesi(int *arr, int size) {
+  int i;
+  pair *p = (pair *)malloc(sizeof(pair) * size);
+  for (i = 0; i < size; i++) {
+    p[i].key = i;
+    p[i].val = arr[i];
+  }
+  return p;
+}
+int cmp(const void *x, const void *y) {
+  return sign(((real *)x) - ((real *)y));
+}
+int cmp_reverse(const void *x, const void *y) {
+  return sign(((real *)y) - ((real *)x));
+}
+int cmp_int(const void *x, const void *y) {
+  return sign(((int *)x) - ((int *)y));
+}
+int cmp_int_reverse(const void *x, const void *y) {
+  return sign(((int *)y) - ((int *)x));
+}
+int cmp_pair(const void *x, const void *y) {
+  return sign(((pair *)x)->val - ((pair *)y)->val);
+}
+int cmp_pair_reverse(const void *x, const void *y) {
+  return sign(((pair *)y)->val - ((pair *)x)->val);
+}
+pair *sort_tuples(pair *p, int size, int reverse) {
+  if (reverse)
+    qsort(p, size, sizeof(pair), cmp_pair_reverse);
+  else
+    qsort(p, size, sizeof(pair), cmp_pair);
+  return p;
+}
+pair *sorted(real *arr, int size, int reverse) {
+  return sort_tuples(array2tuples(arr, size), size, reverse);
+}
+pair *sortedi(int *arr, int size, int reverse) {
+  return sort_tuples(array2tuplesi(arr, size), size, reverse);
+}
+
+typedef struct heap {
+  pair *d;  // hold data pairsof keys and vals
+  int k;    // only retain max k elements
+  int size;
+} heap;
+// min heap: select k max number from an array
+void sid_misc_heap_sift_up(pair *h, int size) {
+  int c = size - 1;
+  int p = (size - 2) >> 1;
+  while (p >= 0 && h[c].val < h[p].val) {
+    SWAP(h[c].key, h[p].key);
+    SWAP(h[c].val, h[p].val);
+    c = p--;
+    p >>= 1;
+  }
+  return;
+}
+void sid_misc_heap_sift_down(pair *h, int size) {
+  int c = 1;
+  int p = 0;
+  while (1) {
+    if (c + 1 < size && h[c].val > h[c + 1].val) c++;
+    if (c >= size || h[p].val <= h[c].val) return;
+    SWAP(h[c].key, h[p].key);
+    SWAP(h[c].val, h[p].val);
+    p = c;
+    c <<= 1;
+    c++;
+  }
+}
+heap *HeapCreate(int k) {
+  heap *h = (heap *)malloc(sizeof(heap));
+  h->d = (pair *)malloc(k * sizeof(pair));
+  h->k = k;
+  h->size = 0;
+  return h;
+}
+void HeapDestroy(heap *h) {
+  free(h->d);
+  free(h);
+  return;
+}
+void HeapEmpty(heap *h) {
+  h->size = 0;
+  return;
+}
+int HeapPush(heap *h, int key, real val) {
+  if (h->size < h->k) {
+    h->d[h->size].key = key;
+    h->d[h->size].val = val;
+    h->size++;
+    sid_misc_heap_sift_up(h->d, h->size);
+  } else if (val > h->d[0].val) {
+    h->d[0].key = key;
+    h->d[0].val = val;
+    sid_misc_heap_sift_down(h->d, h->size);
+  } else
+    return 0;
+  return 1;
+}
+int HeapPop(heap *h) {
+  h->size--;
+  SWAP(h->d[h->size].key, h->d[0].key);
+  SWAP(h->d[h->size].val, h->d[0].val);
+  sid_misc_heap_sift_down(h->d, h->size);
+  return h->d[h->size].key;
+}
+int HeapSort(heap *h) {
+  int size = h->size;
+  while (h->size > 0) HeapPop(h);
+  return size;
+}
 #endif /* ifndef UTIL_MISC */

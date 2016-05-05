@@ -10,9 +10,6 @@
 ///////////////////////
 // Numeric Functions //
 ///////////////////////
-#ifndef real
-#define real double
-#endif
 
 // Parameters:
 //  NUM_EXP_TABLE_LEN          : exp table size
@@ -51,6 +48,7 @@ real NUM_EXP_TABLE[NUM_EXP_TABLE_LEN];
 real NUM_EXP_HIGH = 1.0;
 real NUM_EXP_LOW = -15;
 real NumExp(real x) {
+  // output exp(x) for -NUM_EXP_LOW <= x <= NUM_EXP_HIGH
   int i = (x - NUM_EXP_LOW) / (NUM_EXP_HIGH - NUM_EXP_LOW) * NUM_EXP_TABLE_LEN;
   if (i < 0)
     return 0;
@@ -72,6 +70,8 @@ void NumRandFillVec(real *arr, int l, real lb, real ub) {
 
 int NUM_MAX_PRINT_ELEM = 10;
 real NUM_EPS = 1e-6;
+
+int NumEqual(real x, real y) { return ABS(x - y) <= NUM_EPS; }
 
 void NumPrintArr(char *name, real *arr, int l) {
   int i = 0;
@@ -104,7 +104,6 @@ void NumPrintMatrix(char *name, real *arr, int m, int n) {
       else
         NumPrintArr("", arr + i * n, n);
     }
-    printf("\n");
   }
   fflush(stdout);
   return;
@@ -191,6 +190,30 @@ real NumVecNorm(real *arr, int l) {
   return sqrt(s);
 }
 
+real NumVecZeroNorm(real *arr, int l) {
+  real s = 0;
+  int i = 0;
+  for (i = 0; i < l; i++) s += ((arr[i] == 0) ? 0 : 1);
+  return s;
+}
+
+real NumVecPNorm(real *arr, int l, int p) {
+  real s = 0;
+  int i = 0;
+  for (i = 0; i < l; i++) s += pow(arr[i], p);
+  return pow(s, 1.0 / p);
+}
+
+real NumMatMaxRowNorm(real *mat, int m, int n) {
+  int i;
+  real x = 0, y;
+  for (i = 0; i < m; i++) {
+    y = NumVecNorm(mat + i * n, n);
+    x = ((i == 0 || y > x) ? y : x);
+  }
+  return x;
+}
+
 real NumVecDot(real *a, real *b, int l) {
   real s = 0;
   int i;
@@ -224,12 +247,21 @@ void NumVecMulC(real *a, real c, int l) {
   return;
 }
 
-void NumMulMatVec(real *m, real *a, int r, int l, real *x) {
-  // x <- m * a; m: r * l, a: l
+void NumMulMatVec(real *m, real *a, int l, int r, real *x) {
+  // x <- m * a; x: l, m: l * r, a: r
   int i, j, k = 0;
-  for (i = 0; i < r; i++) x[i] = 0;
-  for (j = 0; j < l; j++)
-    for (i = 0; i < r; i++) x[i] += m[k++] * a[j];
+  for (i = 0; i < l; i++) x[i] = 0;
+  for (i = 0; i < l; i++)
+    for (j = 0; j < r; j++) x[i] += m[k++] * a[j];
+  return;
+}
+
+void NumMulVecMat(real *a, real *m, int l, int r, real *x) {
+  // x <- a * m; x: r, m: l * r, a: l
+  int i, j, k = 0;
+  for (j = 0; j < r; j++) x[j] = 0;
+  for (i = 0; i < l; i++)
+    for (j = 0; j < r; j++) x[j] += m[k++] * a[i];
   return;
 }
 
@@ -281,6 +313,13 @@ int NumSumIntVec(int *a, int l) {
   int s = 0;
   for (i = 0; i < l; i++) s += a[i];
   return s;
+}
+
+int NumIsNanVec(real *a, int l) {
+  int i;
+  for (i = 0; i < l; i++)
+    if (a[i] != a[i]) return 1;
+  return 0;
 }
 
 void NumInit() {

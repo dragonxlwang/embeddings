@@ -6,12 +6,13 @@ DEBUG ?= 0
 #Using -Ofast instead of -O3 might result in faster code,
 #but is supported only by newer GCC versions
 ifeq ($(DEBUG), 0)
-	CFLAGS = -std=gnu99 -lm -pthread -O3 -march=native -Wall -funroll-loops \
-					 -Wno-unused-variable
+	override CFLAGS += -std=gnu99 -lm -pthread -O3 -march=native -Wall \
+										 -funroll-loops  -Wno-unused-variable
 	DIR = bin
 else
-	CFLAGS = -lm -pthread -O0 -g3 -DDEBUG
+	override CFLAGS += -lm -pthread -O0 -g3 -DDEBUG
 	DIR = debug
+	BIN = gdb
 endif
 
 %: %.c
@@ -27,7 +28,7 @@ endif
 	@echo -en "\033[1;36m"; printf '==== RUN: '; echo -n "$(DIR)/$@ "
 	@printf '=%.0s' {1..$(STR_LENGTH)}; echo -e "\033[0m"
 
-	@./$(DIR)/$@
+	@$(BIN) ./$(DIR)/$@
 
 	@echo -en "\033[1;36m"; printf '=%.0s' {1..80}; echo -e "\033[0m"
 clean:

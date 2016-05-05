@@ -18,22 +18,25 @@
 char *V_TEXT_FILE_PATH = "~/data/gigaword/giga_nyt.txt";
 char *V_TEXT_VOCAB_PATH = NULL;  // don't set it if can be inferred from above
 char *V_MODEL_SAVE_PATH = NULL;
-int V_THREAD_NUM = 20;
+int V_THREAD_NUM = 1;
 int V_ITER_NUM = 10;
 // every this number times vocabulary online updates perform one offline update
 real V_OFFLINE_INTERVAL_VOCAB_RATIO = 1.0;
 // for dual burn in, run this number times vocabulary online updates
 real V_BURN_IN_INTERVAL_VOCAB_RATIO = 5;
 // Initial grad descent step size
-real V_INIT_GRAD_DESCENT_STEP_SIZE = 1e-2;
+real V_INIT_GRAD_DESCENT_STEP_SIZE = 1e-4;
+// l-2 regularization:
+real V_L2_REGULARIZATION_WEIGHT = 1e-4;
 // Vocab loading option: cut-off high frequent (stop) words
-int V_VOCAB_HIGH_FREQ_CUTOFF = 0;
+int V_VOCAB_HIGH_FREQ_CUTOFF = 80;
 // if cache model per iteration
 int CACHE_INTERMEDIATE_MODEL = 1;
 // Dimension for embedding, number of dual cluster, vocabulary size cap
 int N = 100;
 int K = 100;
 int V = 100000;  // set to -1 if no limit
+int Q = 20;
 
 void PrintConfigInfo() {
   LOG(1, "Input File: %s\n", V_TEXT_FILE_PATH);
@@ -53,6 +56,7 @@ void PrintConfigInfo() {
   LOG(1, "Dimension N: %d\n", N);
   LOG(1, "Dimension K: %d\n", K);
   LOG(1, "Dimension V: %d\n", V);
+  LOG(1, "Dimension Q: %d\n", Q);
   LOG(1, "Sanity Checks:\n");
   int x = 0;
   x = (NUP > N);
