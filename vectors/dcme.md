@@ -1,6 +1,6 @@
 ## Lazy update
 - Q : number of words that are dominant (in terms of probability) so that those
-...will be updated online (instead of offline), which are called in active set.
+      will be updated online (instead of offline), which are called in active set.
 
 ``model->tar`` would be updated in three ways:
 - the positive part will be updated always online
