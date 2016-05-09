@@ -18,16 +18,16 @@
 char *V_TEXT_FILE_PATH = "~/data/gigaword/giga_nyt.txt";
 char *V_TEXT_VOCAB_PATH = NULL;  // don't set it if can be inferred from above
 char *V_MODEL_SAVE_PATH = NULL;
-int V_THREAD_NUM = 1;
+int V_THREAD_NUM = 20;
 int V_ITER_NUM = 10;
 // every this number times vocabulary online updates perform one offline update
-real V_OFFLINE_INTERVAL_VOCAB_RATIO = 1.0;
+real V_OFFLINE_INTERVAL_VOCAB_RATIO = 0.1;
 // for dual burn in, run this number times vocabulary online updates
 real V_BURN_IN_INTERVAL_VOCAB_RATIO = 5;
 // Initial grad descent step size
 real V_INIT_GRAD_DESCENT_STEP_SIZE = 1e-4;
 // l-2 regularization:
-real V_L2_REGULARIZATION_WEIGHT = 1e-4;
+real V_L2_REGULARIZATION_WEIGHT = 0;  // 5e-3;
 // Vocab loading option: cut-off high frequent (stop) words
 int V_VOCAB_HIGH_FREQ_CUTOFF = 80;
 // if cache model per iteration
@@ -49,6 +49,8 @@ void PrintConfigInfo() {
       (double)V_BURN_IN_INTERVAL_VOCAB_RATIO);
   LOG(1, "Initial Grad Descent Step Size                    : %lf\n",
       (double)V_INIT_GRAD_DESCENT_STEP_SIZE);
+  LOG(1, "L2 Regularization Weight                          : %lf\n",
+      (double)V_L2_REGULARIZATION_WEIGHT);
   LOG(1, "Vocabulary high-freq words cut-off                : %d\n",
       V_VOCAB_HIGH_FREQ_CUTOFF);
   LOG(1, "Cache intermediate models                         : %d\n",

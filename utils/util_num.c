@@ -301,6 +301,16 @@ void NumFillValIntVec(int *a, int l, int v) {
   return;
 }
 
+void NumFillZeroVec(real *a, int l) {
+  memset(a, 0, l * sizeof(real));
+  return;
+}
+
+void NumFillZeroIntVec(int *a, int l) {
+  memset(a, 0, l * sizeof(int));
+  return;
+}
+
 real NumSumVec(real *a, int l) {
   int i;
   real s = 0;

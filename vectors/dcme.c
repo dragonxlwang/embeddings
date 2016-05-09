@@ -28,10 +28,11 @@ struct Bookkeeping {
   real* ww;   // list(K):vector(N) W * dd, synthesis word in prime
   real* hh;   // list(K):vector(N) avg(h_k), sufficient stats
   int* hn;    // list(K): |h_k|
-  int* ii;    // list(K):vector(Q) active word index in each dual distribution
 };
+
 real gd_ss;     // gradient descent step size
 real shrink_w;  // shrink weight
+int max_hn;     // when hn exceeds max_hn, performs offline update for one dist
 
 // current progress for each worker
 real* progress;
@@ -53,56 +54,45 @@ real GetProgress() {
 
 int preceed_newline_flag = 1;
 int simple_ppb_lock = 0;
-void ThreadPrintProgBar(int dbg_lvl, int tid, real p) {
+void ThreadPrintProgBar(int dbg_lvl, int tid, real p, struct Bookkeeping* b) {
   if (simple_ppb_lock) return;
   simple_ppb_lock = 1;
   if (preceed_newline_flag) {
     LOG(dbg_lvl, "\n");
     preceed_newline_flag = 0;
   }
-  // print progress
-  int i, bar_len = 80;
-  clock_t cur_clock_t = clock();
-  real pct = p * 100;
-  int bar = p * bar_len;
-  LOG(dbg_lvl, "\33[2K\r[%7.4lf%%]: ", pct);
-  for (i = 0; i < bar; i++) LOG(dbg_lvl, "+");
-  LOG(dbg_lvl, "~");
-  for (i = bar + 1; i < bar_len; i++) LOG(dbg_lvl, "=");
-  LOG(dbg_lvl, " (tid = %d)", tid);
-  double elapsed_time = (double)(cur_clock_t - start_clock_t) / CLOCKS_PER_SEC;
-  LOG(dbg_lvl, " time: %e / %e", elapsed_time, elapsed_time / V_THREAD_NUM);
-  LOG(dbg_lvl, " gdss: %e", gd_ss);
-  simple_ppb_lock = 0;
-  return;
-}
-
-void DebugModel(struct Bookkeeping* b) {
-  /* LOG(0, "hh=%.3e ", NumVecNorm(b->hh, K * N)); */
+#ifdef DEBUG
   real ww = NumVecNorm(b->ww, K * N);
-  real dd = NumVecPNorm(b->dd, K * V, 1);
   real scr = NumVecNorm(model->scr, V * N);
   real ss = NumMatMaxRowNorm(model->scr, V, N);
   real tar = NumVecNorm(model->tar, V * N);
   real tt = NumMatMaxRowNorm(model->tar, V, N);
-  LOG(0, "ww=%.2e/", ww);
-  LOGC(0, 'r', 'k', "%.2ett ", ww / tt);
-  LOG(0, "dd=%s ", NumEqual(dd, 100) ? "100" : "error");
+#endif
+  // print progress
+  int i, bar_len = 10;
+  clock_t cur_clock_t = clock();
+  real pct = p * 100;
+  int bar = p * bar_len;
+  LOGC(dbg_lvl, 'y', 'k', "\33[2K\r[%7.4lf%%]: ", pct);
+  for (i = 0; i < bar; i++) LOGC(dbg_lvl, 'r', 'k', "+");
+  LOGC(dbg_lvl, 'r', 'k', "~");
+  for (i = bar + 1; i < bar_len; i++) LOGC(dbg_lvl, 'c', 'k', "=");
+  LOGC(dbg_lvl, 'g', 'k', " (tid=%02d)", tid);
+  double elapsed_time = (double)(cur_clock_t - start_clock_t) / CLOCKS_PER_SEC;
+  char* ht = strtime(elapsed_time / V_THREAD_NUM);
+  LOG(dbg_lvl, " TIME:%.2e/", elapsed_time);
+  LOGC(dbg_lvl, 'c', 'k', "%s", ht);
+  LOG(dbg_lvl, " GDSS:%.4e", gd_ss);
+  free(ht);
+#ifdef DEBUG
+  LOG(0, " ww=%.2e/", ww);
+  LOGC(0, 'y', 'k', "%.2ett ", ww / tt);
   LOG(0, "scr=%.2e/%.2e ", scr, scr / ss);
   LOG(0, "tar=%.2e/", tar);
-  LOGC(0, 'r', 'k', "%.2ett ", tar / tt);
-  LOGC(0, 'y', 'k', "tt=%.2e", tt);
-  int i;
-  heap* h = HeapCreate(5);
-  for (i = 0; i < V; i++) {
-    HeapPush(h, i, NumVecNorm(model->tar + i * N, N));
-  }
-  int size = HeapSort(h);
-  for (i = 0; i < size; i++) {
-    LOGC(0, 'c', 'k', " %s", vcb->id2wd[h->d[i].key]);
-    LOG(0, ":%.2lf", h->d[i].val);
-  }
-  HeapDestroy(h);
+  LOGC(0, 'y', 'k', "%.2ett ", tar / tt);
+  LOGC(0, 'c', 'k', "tt=%.2e", tt);
+#endif
+  simple_ppb_lock = 0;
   return;
 }
 
@@ -114,9 +104,9 @@ struct Bookkeeping* BookkeepingCreate() {
   b->ww = NumNewHugeVec(N * K);
   b->hh = NumNewHugeVec(N * K);
   b->hn = NumNewHugeIntVec(K);
-  NumFillValVec(b->hh, N * K, 0);
-  NumFillValIntVec(b->hn, K, 0);
-  NumFillValVec(b->ent, K, 0);
+  NumFillZeroVec(b->hh, N * K);
+  NumFillZeroIntVec(b->hn, K);
+  NumFillZeroVec(b->ent, K);
   NumRandFillVec(b->ww, N * K, -1e-1, 1e-1);
   NumFillValVec(b->dd, V * K, 1.0 / V);
   return b;
@@ -165,23 +155,22 @@ void ModelFree() {
   return;
 }
 
-void ModelGradUpdate(struct Model* m, int p, int i, real c, real* g) {
+void ModelGradUpdate(struct Model* m, int p, int i, real c, real* g,
+                     int shrink) {
   // model minimization update: p=0: scr; p=1: tar
   // use c = +/- 1 to reverse optimization direction
   int j;
-  if (p == 0) {
-    // update scr
+  if (V_L2_REGULARIZATION_WEIGHT != 0 && shrink) {  // L2 regularization
     for (j = 0; j < N; j++) {
       m->scr[i * N + j] *= shrink_w;
-      m->scr[i * N + j] -= c * gd_ss * g[j];
-    }
-  } else {
-    // update tar
-    for (j = 0; j < N; j++) {
-      m->scr[i * N + j] *= shrink_w;
-      m->tar[i * N + j] -= c * gd_ss * g[j];
+      m->tar[i * N + j] *= shrink_w;
     }
   }
+  if (p == 0)  // update scr
+    for (j = 0; j < N; j++) m->scr[i * N + j] -= c * gd_ss * g[j];
+  else  // update tar
+    for (j = 0; j < N; j++) m->tar[i * N + j] -= c * gd_ss * g[j];
+
   return;
 }
 
@@ -210,82 +199,49 @@ int DualDecode(real* h, struct Bookkeeping* b) {
   return z;
 }
 
-void DualUpdateOnline(int* ids, int l, struct Bookkeeping* b, struct Model* m) {
-  // dual decoding for one sentence -- this is used for burn in
-  int i;
-  real h0[NUP], h[NUP];
-  memset(h0, 0, N * sizeof(real));
-  for (i = 0; i < l; i++) NumVecAddCVec(h0, m->scr + ids[i] * N, 1, N);
-  // dual decode
-  for (i = 0; i < l; i++) {
-    NumAddCVecDVec(h0, m->scr + ids[i] * N, 1, -1, N, h);  // h
-    DualDecode(h, b);                                      // z
-  }
-  return;
-}
-
-void PrimalDualUpdateOnline(int* ids, int l, struct Bookkeeping* b,
-                            struct Model* m) {
-  // update primal parameters online for one sentence (ids)
-  int i;
+int Update(int* ids, int l, struct Bookkeeping* b, struct Model* m,
+           int primal) {
+  // update for one sentence (ids, l)
+  // primal = 0: used for burn-in
+  // primal = 1: primal and dual update
+  int offline_performed = 0;
+  int i, j, k;
   real h0[NUP], h[NUP], w0[NUP], w[NUP];
   int z[SUP];
   memset(h0, 0, N * sizeof(real));
   memset(w0, 0, N * sizeof(real));
   for (i = 0; i < l; i++) NumVecAddCVec(h0, m->scr + ids[i] * N, 1, N);
-  // dual decode
   for (i = 0; i < l; i++) {
     NumAddCVecDVec(h0, m->scr + ids[i] * N, 1, -1, N, h);  // h
-    z[i] = DualDecode(h, b);                               // z
-    NumVecAddCVec(w0, m->tar + ids[i] * N, 1, N);          // w - ww
-    NumVecAddCVec(w0, b->ww + z[i] * N, -1, N);
-    // update m->tar (1st part, online update)
-    ModelGradUpdate(m, 1, ids[i], -1, h);
+    z[i] = DualDecode(h, b);                               // dual decode: z
+    if (primal) {                                          // primal part 1
+      NumVecAddCVec(w0, m->tar + ids[i] * N, 1, N);        // w - ww
+      NumVecAddCVec(w0, b->ww + z[i] * N, -1, N);
+      ModelGradUpdate(m, 1, ids[i], -1, h, 0);  // primal online update: m->tar
+    }
+    if (b->hn[z[i]] >= max_hn) {  // offline
+      offline_performed = 1;
+      k = z[i];
+      if (primal)                // primal part 2
+        for (j = 0; j < V; j++)  // primal offline update: m->tar (neg sampling)
+          ModelGradUpdate(m, 1, j, b->dd[k * V + j], b->hh + k * N, 1);
+      NumVecMulC(b->hh + k * N, 1.0 / b->hn[k], N);  // hh
+      for (j = 0; j < V; j++)                        // dd
+        b->dd[k * V + j] = NumVecDot(m->tar + j * N, b->hh + k * N, N);
+      b->ent[k] = NumSoftMax(b->dd + k * V, V);                  // ent
+      NumMulVecMat(b->dd + k * V, m->tar, V, N, b->ww + k * N);  // ww
+      b->hn[k] = 0;                                              // reset hn
+      NumFillZeroVec(b->hh + k * N, N);                          // reset hh
+    }
   }
-  for (i = 0; i < l; i++) {
-    NumAddCVecDVec(w0, m->tar + ids[i] * N, 1, -1, N, w);
-    NumVecAddCVec(w, b->ww + z[i] * N, 1, N);
-    // update m->scr
-    ModelGradUpdate(m, 0, ids[i], -1, w);
+  if (primal) {  // primal part 3
+    for (i = 0; i < l; i++) {
+      NumAddCVecDVec(w0, m->tar + ids[i] * N, 1, -1, N, w);  // w - ww
+      NumVecAddCVec(w, b->ww + z[i] * N, 1, N);
+      ModelGradUpdate(m, 0, ids[i], -1, w, 0);  // update m->scr
+    }
   }
-}
-
-void PrimalUpdateOffline(struct Bookkeeping* b, struct Model* m) {
-  // update primal parameters offline: update m->tar (negative sampling)
-  // call before DualUpdateOffline
-  int i, k;
-  for (k = 0; k < K; k++)
-    for (i = 0; i < V; i++)
-      ModelGradUpdate(m, 1, i, b->dd[k * V + i], b->hh + k * N);
-  /* // l-2 regularization */
-  /* ModelShrink(m, V_L2_REGULARIZATION_WEIGHT); */
-  return;
-}
-
-void DualUpdateOffline(struct Bookkeeping* b, struct Model* m) {
-  // update dual distributions and others (b->dd,ww,ent)
-  int i, k;
-  // compute hh
-  for (k = 0; k < K; k++)
-    if (b->hn[k]) NumVecMulC(b->hh + k * N, 1.0 / b->hn[k], N);
-  for (k = 0; k < K; k++) {
-    // update dd
-    for (i = 0; i < V; i++)
-      b->dd[k * V + i] = NumVecDot(m->tar + i * N, b->hh + k * N, N);
-    // normalize dd and update ent
-    b->ent[k] = NumSoftMax(b->dd + k * V, V);
-    // update ww
-    // tar: V * N; dd: K * (V)
-    NumMulVecMat(b->dd + k * V, m->tar, V, N, b->ww + k * N);
-  }
-  return;
-}
-
-void DualResetOffline(struct Bookkeeping* b) {
-  // dual model paramters reset (b->hh,hn)
-  NumFillValVec(b->hh, N * K, 0);
-  NumFillValIntVec(b->hn, K, 0);
-  return;
+  return offline_performed;
 }
 
 void* ThreadWork(void* arg) {
@@ -304,25 +260,13 @@ void* ThreadWork(void* arg) {
   LOG(2, "*");
   // burn in
   int wids[SUP], wnum;
-  long long int online_cnt = 0;
-  long long int offline_int = V * V_OFFLINE_INTERVAL_VOCAB_RATIO;
   long long int burn_in_left = V * V_BURN_IN_INTERVAL_VOCAB_RATIO;
   fseek(fin, fbeg, SEEK_SET);
   while (burn_in_left > 0) {
     wnum = TextReadSent(fin, vcb, wids, 1, 1);
-    DualUpdateOnline(wids, wnum, b, model);
-    online_cnt += wnum;
     burn_in_left -= wnum;
-    if (online_cnt >= offline_int) {
-#ifdef DEBUG
-      printfc('c', 'k', "Burnin: ");
-      DebugModel(b);
-      printf("\n");
-#endif
-      // offline computation
-      DualUpdateOffline(b, model);
-      DualResetOffline(b);
-      online_cnt = 0;
+    if (Update(wids, wnum, b, model, 0)) {
+      // nop
     }
     if (feof(fin) || ftell(fin) >= fend) {
       fseek(fin, fbeg, SEEK_SET);
@@ -332,53 +276,23 @@ void* ThreadWork(void* arg) {
   // training
   real p = 0;
   int iter_num = 0;
-  online_cnt = 0;
   fseek(fin, fbeg, SEEK_SET);
-#ifdef DEBUG
-  printf("\n");
-  int tmp_cnt = 0;
-#endif
   while (iter_num < V_ITER_NUM) {
-// online computation
-#ifdef DEBUG
-/* tmp_cnt++; */
-/* if (tmp_cnt >= 50) { */
-/*   tmp_cnt = 0; */
-/*   ThreadPrintProgBar(2, tid, p); */
-/*   printf(" Online: "); */
-/*   DebugModel(b); */
-/*   printf("\n"); */
-/* } */
-#endif
     wnum = TextReadSent(fin, vcb, wids, 1, 1);
-    PrimalDualUpdateOnline(wids, wnum, b, model);
-    online_cnt += wnum;
-    if (online_cnt >= offline_int) {
-      // offline computation
-      PrimalUpdateOffline(b, model);
-      DualUpdateOffline(b, model);
-      DualResetOffline(b);
-      online_cnt = 0;
+    if (Update(wids, wnum, b, model, 1)) {
+      // ftell cost running time roughly 15/14 times of an addition operation
+      fpos = ftell(fin);
+      progress[tid] = iter_num + (double)(fpos - fbeg) / (fend - fbeg);
       // adjust gd_ss
       p = GetProgress();
       gd_ss = V_INIT_GRAD_DESCENT_STEP_SIZE * (1 - p);
-// debug info
-#ifndef DEBUG
-      ThreadPrintProgBar(2, tid, p);
-#endif /* ifndef  */
-#ifdef DEBUG
-      printfc('g', 'k', "Offline: fin=%.2e ", (real)ftell(fin));
-      DebugModel(b);
-      printf("\n");
-#endif
-    }
-    // ftell cost running time roughly 15/14 times of an addition operation
-    fpos = ftell(fin);
-    progress[tid] = iter_num + (double)(fpos - fbeg) / (fend - fbeg);
-    if (feof(fin) || fpos >= fend) {
-      fseek(fin, fbeg, SEEK_SET);
-      ModelSave(iter_num);
-      iter_num++;
+      // debug info
+      ThreadPrintProgBar(2, tid, p, b);
+      if (feof(fin) || fpos >= fend) {
+        fseek(fin, fbeg, SEEK_SET);
+        ModelSave(iter_num);
+        iter_num++;
+      }
     }
   }
   fclose(fin);
@@ -391,7 +305,7 @@ void ScheduleWork() {
   long long int tid;
   start_clock_t = clock();
   progress = (real*)malloc(V_THREAD_NUM * sizeof(real));
-  NumFillValVec(progress, V_THREAD_NUM, 0);
+  NumFillZeroVec(progress, V_THREAD_NUM);
   VariableInit();
   NumInit();
   vcb = TextLoadVocab(V_TEXT_VOCAB_PATH, V, V_VOCAB_HIGH_FREQ_CUTOFF);
@@ -400,6 +314,7 @@ void ScheduleWork() {
   LOG(1, "Actual V: %d\n", V);
   ModelInit();
   shrink_w = 1 - V_L2_REGULARIZATION_WEIGHT;
+  max_hn = V * V_OFFLINE_INTERVAL_VOCAB_RATIO;
   LOG(2, "Threads spawning: ");
   pthread_t* pt = (pthread_t*)malloc(V_THREAD_NUM * sizeof(pthread_t));
   for (tid = 0; tid < V_THREAD_NUM; tid++)

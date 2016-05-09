@@ -190,6 +190,16 @@ void printfc(char fg_color_code, char bg_color_code, const char *fmt, ...) {
   return;
 }
 
+char *strtime(int s) {
+  int ss = s;
+  int mm = ss / 60;
+  ss %= 60;
+  int hh = mm / 60;
+  mm %= 60;
+  int dd = hh / 24;
+  hh %= 24;
+  return sformat("%02d:%02d:%02d:%02d", dd, hh, mm, ss);
+}
 /***
  *        #
  *       # #   #       ####   ####  #####  # ##### #    # #    #
