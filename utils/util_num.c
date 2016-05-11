@@ -20,29 +20,6 @@
 // Init:
 //  NumInit()
 
-#define MAX(arr, l)                                        \
-  ({                                                       \
-    __typeof__(arr[0]) x = arr[0];                         \
-    int i;                                                 \
-    for (i = 1; i < l; i++) x = (x < arr[i]) ? arr[i] : x; \
-    x;                                                     \
-  })
-#define MIN(arr, l)                                        \
-  ({                                                       \
-    __typeof__(arr[0]) x = arr[0];                         \
-    int i;                                                 \
-    for (i = 1; i < l; i++) x = (x > arr[i]) ? arr[i] : x; \
-    x;                                                     \
-  })
-#define ABS(x) ((x) < 0 ? -(x) : (x))
-#define ABSMAX(arr, l)                                               \
-  ({                                                                 \
-    __typeof__(arr[0]) x = ABS(arr[0]);                              \
-    int i;                                                           \
-    for (i = 1; i < l; i++) x = (x < ABS(arr[i])) ? ABS(arr[i]) : x; \
-    x;                                                               \
-  })
-
 #define NUM_EXP_TABLE_LEN 0xFFFFF
 real NUM_EXP_TABLE[NUM_EXP_TABLE_LEN];
 real NUM_EXP_HIGH = 1.0;
@@ -83,12 +60,16 @@ void NumPrintArr(char *name, real *arr, int l) {
       name10[i] = ' ';
   }
   printfc('g', 'k', "%10s: ", name10);
+  int abbrv = 0;
   for (i = 0; i < l; i++)
     if (i < NUM_MAX_PRINT_ELEM - 2 || l - i <= 2) {
       if (-NUM_EPS <= arr[i] && arr[i] <= NUM_EPS)
         printf("%12.6g ", 0.0);
       else
         printf("%12.6g ", arr[i]);
+    } else if (!abbrv) {
+      abbrv = 1;
+      printf("     ...     ");
     }
   printf("\n");
   fflush(stdout);
@@ -97,12 +78,16 @@ void NumPrintArr(char *name, real *arr, int l) {
 
 void NumPrintMatrix(char *name, real *arr, int m, int n) {
   int i;
+  int abbrv = 0;
   for (i = 0; i < m; i++) {
     if (i < NUM_MAX_PRINT_ELEM - 2 || m - i <= 2) {
       if (i == 0)
         NumPrintArr(name, arr, n);
       else
         NumPrintArr("", arr + i * n, n);
+    } else if (!abbrv) {
+      abbrv = 1;
+      printf(" ... \n");
     }
   }
   fflush(stdout);
@@ -244,6 +229,13 @@ void NumVecMulC(real *a, real c, int l) {
   // in place a <- c * a
   int i;
   for (i = 0; i < l; i++) a[i] *= c;
+  return;
+}
+
+void NumMulCVec(real *a, real c, int l, real *x) {
+  // x <- c * a
+  int i;
+  for (i = 0; i < l; i++) x[i] = c * a[i];
   return;
 }
 

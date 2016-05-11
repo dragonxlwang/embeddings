@@ -70,7 +70,8 @@ int log_debug_mode = 2;
     d = (char *)malloc((strlen(s) + 1) * sizeof(char)); \
     strcpy(d, s);                                       \
   })
-
+#define LOWER(c) (((c) >= 'A' && (c) <= 'Z') ? (c) - 'A' + 'a' : (c))
+#define UPPER(c) (((c) >= 'a' && (c) <= 'z') ? (c) - 'a' + 'A' : (c))
 char *sconcat(char *sa, char *sb, int la, int lb) {
   // if la = -1 (or lb), use whole string for concatenating
   int i;
@@ -214,6 +215,30 @@ char *strtime(int s) {
 #define real double
 #endif
 
+#define SMALLER(a, b) ((a) <= (b) ? (a) : (b))
+#define LARGER(a, b) ((a) >= (b) ? (a) : (b))
+#define MAX(arr, l)                                        \
+  ({                                                       \
+    __typeof__(arr[0]) x = arr[0];                         \
+    int i;                                                 \
+    for (i = 1; i < l; i++) x = (x < arr[i]) ? arr[i] : x; \
+    x;                                                     \
+  })
+#define MIN(arr, l)                                        \
+  ({                                                       \
+    __typeof__(arr[0]) x = arr[0];                         \
+    int i;                                                 \
+    for (i = 1; i < l; i++) x = (x > arr[i]) ? arr[i] : x; \
+    x;                                                     \
+  })
+#define ABS(x) ((x) < 0 ? -(x) : (x))
+#define ABSMAX(arr, l)                                               \
+  ({                                                                 \
+    __typeof__(arr[0]) x = ABS(arr[0]);                              \
+    int i;                                                           \
+    for (i = 1; i < l; i++) x = (x < ABS(arr[i])) ? ABS(arr[i]) : x; \
+    x;                                                               \
+  })
 #define SWAP(x, y)       \
   ({                     \
     __typeof__(x) z = x; \

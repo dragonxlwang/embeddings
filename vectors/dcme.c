@@ -10,6 +10,7 @@
 #include <string.h>
 #include <time.h>
 #include <unistd.h>
+#include "../eval/eval_question_accuracy.c"
 #include "../utils/util_misc.c"
 #include "../utils/util_num.c"
 #include "../utils/util_text.c"
@@ -28,6 +29,11 @@ struct Bookkeeping {
   real* ww;   // list(K):vector(N) W * dd, synthesis word in prime
   real* hh;   // list(K):vector(N) avg(h_k), sufficient stats
   int* hn;    // list(K): |h_k|
+#ifdef DEBUG
+  real acc_sum;
+  int acc_cnt;
+  real norm;
+#endif
 };
 
 real gd_ss;     // gradient descent step size
@@ -53,27 +59,36 @@ real GetProgress() {
 }
 
 int preceed_newline_flag = 1;
-int simple_ppb_lock = 0;
+int ppb_lock = 0;
+int ppb_cnt = 0;
+#ifdef DEBUG
+real acum_acc = -1;
+#endif
 void ThreadPrintProgBar(int dbg_lvl, int tid, real p, struct Bookkeeping* b) {
-  if (simple_ppb_lock) return;
-  simple_ppb_lock = 1;
+  ppb_cnt++;
+  if (ppb_lock) return;
+  ppb_lock = 1;
   if (preceed_newline_flag) {
     LOG(dbg_lvl, "\n");
     preceed_newline_flag = 0;
   }
+  // print progress
+  int i, bar_len = 10;
+  clock_t cur_clock_t = clock();
+  real pct = p * 100;
+  int bar = p * bar_len;
 #ifdef DEBUG
   real ww = NumVecNorm(b->ww, K * N);
   real scr = NumVecNorm(model->scr, V * N);
   real ss = NumMatMaxRowNorm(model->scr, V, N);
   real tar = NumVecNorm(model->tar, V * N);
   real tt = NumMatMaxRowNorm(model->tar, V, N);
+  heap* h = HeapCreate(5);
+  for (i = 0; i < V; i++) HeapPush(h, i, NumVecNorm(model->tar + i * N, N));
+  HeapSort(h);
 #endif
-  // print progress
-  int i, bar_len = 10;
-  clock_t cur_clock_t = clock();
-  real pct = p * 100;
-  int bar = p * bar_len;
-  LOGC(dbg_lvl, 'y', 'k', "\33[2K\r[%7.4lf%%]: ", pct);
+  /* LOGC(dbg_lvl, 'y', 'k', "\33[2K\r[%7.4lf%%]: ", pct); */
+  LOGC(dbg_lvl, 'y', 'k', "\n[%7.4lf%%]: ", pct);
   for (i = 0; i < bar; i++) LOGC(dbg_lvl, 'r', 'k', "+");
   LOGC(dbg_lvl, 'r', 'k', "~");
   for (i = bar + 1; i < bar_len; i++) LOGC(dbg_lvl, 'c', 'k', "=");
@@ -90,9 +105,27 @@ void ThreadPrintProgBar(int dbg_lvl, int tid, real p, struct Bookkeeping* b) {
   LOG(0, "scr=%.2e/%.2e ", scr, scr / ss);
   LOG(0, "tar=%.2e/", tar);
   LOGC(0, 'y', 'k', "%.2ett ", tar / tt);
-  LOGC(0, 'c', 'k', "tt=%.2e", tt);
+  LOGC(0, 'c', 'k', "tt=%.2e ", tt);
+  for (i = 0; i < 5; i++) {
+    LOGC(0, 'b', 'k', "%s", vcb->id2wd[h->d[i].key]);
+    LOG(0, ":%lf ", h->d[i].val);
+  }
+  if (acum_acc < 0)
+    acum_acc = b->acc_sum / b->acc_cnt;
+  else
+    acum_acc = 0.9 * acum_acc + 0.1 * b->acc_sum / b->acc_cnt;
+  LOGC(0, 'r', 'c', " ACC:%.2e/%.2e", b->acc_sum / b->acc_cnt, acum_acc);
+  LOGC(0, 'w', 'r', " ENT:%.2e", NumSumVec(b->ent, K));
+  LOGC(0, 'r', 'c', " NORM:%.2e", b->norm);
+  b->acc_sum = 0;
+  b->acc_cnt = 0;
+  LOG(0, " [%d]", ppb_cnt);
+  if (ppb_cnt >= 10000) {
+    ppb_cnt = 0;
+    /* EvalQuestionAccuracy(model->tar, vcb, 30000); */
+  }
 #endif
-  simple_ppb_lock = 0;
+  ppb_lock = 0;
   return;
 }
 
@@ -109,6 +142,10 @@ struct Bookkeeping* BookkeepingCreate() {
   NumFillZeroVec(b->ent, K);
   NumRandFillVec(b->ww, N * K, -1e-1, 1e-1);
   NumFillValVec(b->dd, V * K, 1.0 / V);
+#ifdef DEBUG
+  b->acc_sum = 0;
+  b->acc_cnt = 0;
+#endif
   return b;
 }
 
@@ -121,10 +158,10 @@ void ModelInit() {
   return;
 }
 
-int save_iter_num = -1;
+int saved_iter_num = -1;
 void ModelSave(int iter_num) {
-  if (iter_num <= save_iter_num) return;  // avoid thread racing by simple lock
-  save_iter_num = iter_num;
+  if (iter_num <= saved_iter_num) return;  // avoid thread racing
+  saved_iter_num = iter_num;
   char* mfp = sformat("%s.part%d", V_MODEL_SAVE_PATH, iter_num);
   FILE* fout = fopen(mfp, "wb");
   if (!fout) {
@@ -155,22 +192,12 @@ void ModelFree() {
   return;
 }
 
-void ModelGradUpdate(struct Model* m, int p, int i, real c, real* g,
-                     int shrink) {
+void ModelGradUpdate(struct Model* m, int p, int i, real c, real* g) {
   // model minimization update: p=0: scr; p=1: tar
-  // use c = +/- 1 to reverse optimization direction
-  int j;
-  if (V_L2_REGULARIZATION_WEIGHT != 0 && shrink) {  // L2 regularization
-    for (j = 0; j < N; j++) {
-      m->scr[i * N + j] *= shrink_w;
-      m->tar[i * N + j] *= shrink_w;
-    }
-  }
   if (p == 0)  // update scr
-    for (j = 0; j < N; j++) m->scr[i * N + j] -= c * gd_ss * g[j];
+    NumVecAddCVec(m->scr + i * N, g, -c * gd_ss, N);
   else  // update tar
-    for (j = 0; j < N; j++) m->tar[i * N + j] -= c * gd_ss * g[j];
-
+    NumVecAddCVec(m->tar + i * N, g, -c * gd_ss, N);
   return;
 }
 
@@ -187,8 +214,8 @@ int DualDecode(real* h, struct Bookkeeping* b) {
   real s = 0, t;
   int z = 0, k;
   for (k = 0; k < K; k++) {
-    t = -NumVecDot(h, b->ww + k * N, N) - b->ent[k];
-    if (k == 0 || s > t) {
+    t = NumVecDot(h, b->ww + k * N, N) + b->ent[k];
+    if (k == 0 || t > s) {
       s = t;
       z = k;
     }
@@ -205,40 +232,65 @@ int Update(int* ids, int l, struct Bookkeeping* b, struct Model* m,
   // primal = 0: used for burn-in
   // primal = 1: primal and dual update
   int offline_performed = 0;
-  int i, j, k;
-  real h0[NUP], h[NUP], w0[NUP], w[NUP];
+  int i, j, k, lt, rt, md;
+  real h0[NUP], h[NUP], hw[SUP], wd[NUP * SUP], w0[NUP], w[NUP];
   int z[SUP];
-  memset(h0, 0, N * sizeof(real));
-  memset(w0, 0, N * sizeof(real));
-  for (i = 0; i < l; i++) NumVecAddCVec(h0, m->scr + ids[i] * N, 1, N);
+  NumFillZeroVec(h0, N);
+  NumFillZeroVec(w0, N);
+  for (i = 0; i < SMALLER(l, C - 1); i++)
+    NumVecAddCVec(h0, m->scr + ids[i] * N, 1, N);
   for (i = 0; i < l; i++) {
-    NumAddCVecDVec(h0, m->scr + ids[i] * N, 1, -1, N, h);  // h
-    z[i] = DualDecode(h, b);                               // dual decode: z
-    if (primal) {                                          // primal part 1
-      NumVecAddCVec(w0, m->tar + ids[i] * N, 1, N);        // w - ww
-      NumVecAddCVec(w0, b->ww + z[i] * N, -1, N);
-      ModelGradUpdate(m, 1, ids[i], -1, h, 0);  // primal online update: m->tar
+    lt = i - C - 1;
+    rt = i + C;
+    md = i;
+    if (lt >= 0) NumVecAddCVec(h0, m->scr + ids[lt] * N, -1, N);     // h0--
+    if (rt < l) NumVecAddCVec(h0, m->scr + ids[rt] * N, 1, N);       // h0++
+    hw[md] = 1.0 / (SMALLER(rt, l - 1) - LARGER(lt, 0));             // hw
+    NumAddCVecDVec(h0, m->scr + ids[md] * N, hw[i], -hw[md], N, h);  // h
+    z[md] = DualDecode(h, b);                                        // dcd z
+#ifdef DEBUG
+    b->acc_sum += b->dd[z[md] * V + ids[md]];
+    b->acc_cnt++;
+#endif
+    if (primal) {                          // primal 1
+      NumAddCVecDVec(m->tar + ids[i] * N,  // wd[i] <- w - ww
+                     b->ww + z[i] * N, 1, -1, N, wd + i * N);
+      lt = i - 2 * C - 1;
+      rt = i;
+      md = i - C;
+      NumVecAddCVec(w0, wd + rt * N, hw[rt], N);  // w0++
+      while (md < l) {
+        if (lt >= 0) NumVecAddCVec(w0, wd + lt * N, -hw[lt], N);  // w0--
+        if (md >= 0) {
+          NumAddCVecDVec(w0, wd + md * N, 1, -hw[md], N, w);  // w
+          ModelGradUpdate(m, 0, ids[md], -1, w);              // up m->scr
+        }
+        if (i == l - 1) {
+          md++;
+          lt++;
+        } else
+          break;
+      }
+      ModelGradUpdate(m, 1, ids[i], -1, h);  // up m->tar
     }
     if (b->hn[z[i]] >= max_hn) {  // offline
       offline_performed = 1;
       k = z[i];
-      if (primal)                // primal part 2
-        for (j = 0; j < V; j++)  // primal offline update: m->tar (neg sampling)
-          ModelGradUpdate(m, 1, j, b->dd[k * V + j], b->hh + k * N, 1);
-      NumVecMulC(b->hh + k * N, 1.0 / b->hn[k], N);  // hh
-      for (j = 0; j < V; j++)                        // dd
-        b->dd[k * V + j] = NumVecDot(m->tar + j * N, b->hh + k * N, N);
+      if (primal) {              // primal 2
+        for (j = 0; j < V; j++)  // up m->tar (neg sampling)
+          ModelGradUpdate(m, 1, j, b->dd[k * V + j], b->hh + k * N);
+        ModelShrink(m, V_L2_REGULARIZATION_WEIGHT);
+      }
+      NumVecMulC(b->hh + k * N, 1.0 / b->hn[k], N);              // hh
+      NumMulMatVec(m->tar, b->hh + k * N, V, N, b->dd + k * V);  // dd
+      NumVecMulC(b->dd + k * V, 2, V);
+#ifdef DEBUG
+      b->norm = NumVecNorm(b->dd + k * V, V);
+#endif
       b->ent[k] = NumSoftMax(b->dd + k * V, V);                  // ent
       NumMulVecMat(b->dd + k * V, m->tar, V, N, b->ww + k * N);  // ww
-      b->hn[k] = 0;                                              // reset hn
-      NumFillZeroVec(b->hh + k * N, N);                          // reset hh
-    }
-  }
-  if (primal) {  // primal part 3
-    for (i = 0; i < l; i++) {
-      NumAddCVecDVec(w0, m->tar + ids[i] * N, 1, -1, N, w);  // w - ww
-      NumVecAddCVec(w, b->ww + z[i] * N, 1, N);
-      ModelGradUpdate(m, 0, ids[i], -1, w, 0);  // update m->scr
+      b->hn[k] = 0;                                              // reset hn[k]
+      NumFillZeroVec(b->hh + k * N, N);                          // reset hh[k]
     }
   }
   return offline_performed;
@@ -264,6 +316,7 @@ void* ThreadWork(void* arg) {
   fseek(fin, fbeg, SEEK_SET);
   while (burn_in_left > 0) {
     wnum = TextReadSent(fin, vcb, wids, 1, 1);
+    if (wnum < 2) continue;
     burn_in_left -= wnum;
     if (Update(wids, wnum, b, model, 0)) {
       // nop
@@ -279,6 +332,7 @@ void* ThreadWork(void* arg) {
   fseek(fin, fbeg, SEEK_SET);
   while (iter_num < V_ITER_NUM) {
     wnum = TextReadSent(fin, vcb, wids, 1, 1);
+    if (wnum < 2) continue;
     if (Update(wids, wnum, b, model, 1)) {
       // ftell cost running time roughly 15/14 times of an addition operation
       fpos = ftell(fin);
