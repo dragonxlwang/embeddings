@@ -201,6 +201,25 @@ char *strtime(int s) {
   hh %= 24;
   return sformat("%02d:%02d:%02d:%02d", dd, hh, mm, ss);
 }
+
+/***
+ *     #######
+ *     #       # #      ######
+ *     #       # #      #
+ *     #####   # #      #####
+ *     #       # #      #
+ *     #       # #      #
+ *     #       # ###### ######
+ *
+ */
+int fexists(const char *filename) {
+  // however, this also return true if filename is a directory
+  // which might not be desired
+  FILE *file = fopen(filename, "r");
+  if (file) fclose(file);
+  return (file != 0);
+}
+
 /***
  *        #
  *       # #   #       ####   ####  #####  # ##### #    # #    #

@@ -281,6 +281,19 @@ real NumSoftMax(real *a, int l) {
   return e;
 }
 
+void NumVecProjUnitSphere(real *a, int l) {
+  // project to unit sphere
+  NumVecMulC(a, 1.0 / NumVecNorm(a, l), l);
+  return;
+}
+
+void NumVecProjUnitBall(real *a, int l) {
+  // project to unit ball
+  real c = 100.0 / NumVecNorm(a, l);
+  if (c < 1) NumVecMulC(a, c, l);
+  return;
+}
+
 void NumFillValVec(real *a, int l, real v) {
   int i;
   for (i = 0; i < l; i++) a[i] = v;
@@ -323,6 +336,16 @@ int NumIsNanVec(real *a, int l) {
     if (a[i] != a[i]) return 1;
   return 0;
 }
+
+real NumVecMean(real *a, int l) { return NumSumVec(a, l) / l; }
+
+real NumVecVar(real *a, int l) {
+  real x = NumVecNorm(a, l);
+  real y = NumVecMean(a, l);
+  return x * x / l - y * y;
+}
+
+real NumVecStd(real *a, int l) { return sqrt(NumVecVar(a, l)); }
 
 void NumInit() {
   // Initialize exp table;

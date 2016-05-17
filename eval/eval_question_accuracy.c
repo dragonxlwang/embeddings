@@ -18,7 +18,16 @@ void EvalQuestionAccuracy(real* e, struct Vocabulary* vcb, int V) {
   int a, b1, b2, b3, b4, c;
   int TOPCNT = 1;
   heap* h = HeapCreate(TOPCNT);
+  real len;
+  real max_len = 0, sum_len = 0;
   printf("\n");
+  for (a = 0; a < V; a++) {
+    len = NumVecNorm(e + a * N, N);
+    if (len > max_len) max_len = len;
+    sum_len += len;
+    NumVecMulC(e + a * N, 1.0 / len, N);
+  }
+  printf("\nsum_len=%lf, max_len=%lf\n", sum_len, max_len);
   while (1) {
     HeapEmpty(h);
     fscanf(fin, "%s", st1);
@@ -55,6 +64,7 @@ void EvalQuestionAccuracy(real* e, struct Vocabulary* vcb, int V) {
     b4 = VocabGetId(vcb, st4);
     TQ++;
     if (b1 == -1 || b2 == -1 || b3 == -1 || b4 == -1) continue;  // UNK
+    if (b1 >= V || b2 >= V || b3 >= V || b4 >= V) continue;      // exceed V
     TQS++;
     NumAddCVecDVec(e + b1 * N, e + b2 * N, 1, -1, N, vec);
     NumVecAddCVec(vec, e + b3 * N, 1, N);
@@ -84,4 +94,36 @@ void EvalQuestionAccuracy(real* e, struct Vocabulary* vcb, int V) {
   fclose(fin);
   HeapDestroy(h);
   return;
+}
+
+real *tar, *scr;
+/* char* EV_MODEL_FILE_PATH = "/home/xwang95/data/gigaword/giga_nyt.mdl.part1";
+ */
+char* EV_MODEL_FILE_PATH = "/home/xwang95/data/text8/text8.mdl";
+void ModelLoad() {
+  FILE* fin = fopen(EV_MODEL_FILE_PATH, "rb");
+  if (!fin) {
+    LOG(0, "Error!\n");
+    exit(1);
+  }
+  scr = NumNewHugeVec(N * V);
+  if (fread(scr, sizeof(real), N * V, fin) != N * V) {
+    LOG(0, "Error!\n");
+    exit(1);
+  }
+  tar = NumNewHugeVec(N * V);
+  if (fread(tar, sizeof(real), N * V, fin) != N * V) {
+    LOG(0, "Error!\n");
+    exit(1);
+  }
+  return;
+}
+
+int main() {
+  VariableInit();
+  struct Vocabulary* vcb =
+      TextLoadVocab(V_VOCAB_FILE_PATH, V, V_VOCAB_HIGH_FREQ_CUTOFF);
+  ModelLoad();
+  EvalQuestionAccuracy(tar, vcb, 10000);
+  return 0;
 }

@@ -10,7 +10,6 @@
 #include <string.h>
 #include <time.h>
 #include <unistd.h>
-#include "../eval/eval_question_accuracy.c"
 #include "../utils/util_misc.c"
 #include "../utils/util_num.c"
 #include "../utils/util_text.c"
@@ -32,13 +31,11 @@ struct Bookkeeping {
 #ifdef DEBUG
   real acc_sum;
   int acc_cnt;
-  real norm;
 #endif
 };
 
-real gd_ss;     // gradient descent step size
-real shrink_w;  // shrink weight
-int max_hn;     // when hn exceeds max_hn, performs offline update for one dist
+real gd_ss;  // gradient descent step size
+int max_hn;  // when hn exceeds max_hn, performs offline update for one dist
 
 // current progress for each worker
 real* progress;
@@ -51,21 +48,17 @@ clock_t start_clock_t;
 
 // some helper functions for debugging
 real GetProgress() {
-  int i;
-  real p = 0;
-  for (i = 0; i < V_THREAD_NUM; i++) p += progress[i];
+  real p = NumSumVec(progress, V_THREAD_NUM);
   p /= (V_THREAD_NUM * V_ITER_NUM);
   return p;
 }
 
 int preceed_newline_flag = 1;
 int ppb_lock = 0;
-int ppb_cnt = 0;
 #ifdef DEBUG
 real acum_acc = -1;
 #endif
 void ThreadPrintProgBar(int dbg_lvl, int tid, real p, struct Bookkeeping* b) {
-  ppb_cnt++;
   if (ppb_lock) return;
   ppb_lock = 1;
   if (preceed_newline_flag) {
@@ -83,9 +76,11 @@ void ThreadPrintProgBar(int dbg_lvl, int tid, real p, struct Bookkeeping* b) {
   real ss = NumMatMaxRowNorm(model->scr, V, N);
   real tar = NumVecNorm(model->tar, V * N);
   real tt = NumMatMaxRowNorm(model->tar, V, N);
-  heap* h = HeapCreate(5);
-  for (i = 0; i < V; i++) HeapPush(h, i, NumVecNorm(model->tar + i * N, N));
-  HeapSort(h);
+  real eem = NumVecMean(b->ent, K);
+  real ees = NumVecStd(b->ent, K);
+/* heap* h = HeapCreate(5); */
+/* for (i = 0; i < V; i++) HeapPush(h, i, NumVecNorm(model->tar + i * N, N)); */
+/* HeapSort(h); */
 #endif
   /* LOGC(dbg_lvl, 'y', 'k', "\33[2K\r[%7.4lf%%]: ", pct); */
   LOGC(dbg_lvl, 'y', 'k', "\n[%7.4lf%%]: ", pct);
@@ -100,30 +95,24 @@ void ThreadPrintProgBar(int dbg_lvl, int tid, real p, struct Bookkeeping* b) {
   LOG(dbg_lvl, " GDSS:%.4e", gd_ss);
   free(ht);
 #ifdef DEBUG
-  LOG(0, " ww=%.2e/", ww);
-  LOGC(0, 'y', 'k', "%.2ett ", ww / tt);
+  /* LOG(0, " ww=%.2e/", ww); */
+  /* LOGC(0, 'y', 'k', "%.2ett ", ww / tt); */
   LOG(0, "scr=%.2e/%.2e ", scr, scr / ss);
   LOG(0, "tar=%.2e/", tar);
   LOGC(0, 'y', 'k', "%.2ett ", tar / tt);
-  LOGC(0, 'c', 'k', "tt=%.2e ", tt);
-  for (i = 0; i < 5; i++) {
-    LOGC(0, 'b', 'k', "%s", vcb->id2wd[h->d[i].key]);
-    LOG(0, ":%lf ", h->d[i].val);
-  }
+  /* LOGC(0, 'c', 'k', "tt=%.2e ", tt); */
+  /* for (i = 0; i < 5; i++) { */
+  /*   LOGC(0, 'b', 'k', "%s", vcb->id2wd[h->d[i].key]); */
+  /*   LOG(0, ":%lf ", h->d[i].val); */
+  /* } */
   if (acum_acc < 0)
     acum_acc = b->acc_sum / b->acc_cnt;
   else
     acum_acc = 0.9 * acum_acc + 0.1 * b->acc_sum / b->acc_cnt;
   LOGC(0, 'r', 'c', " ACC:%.2e/%.2e", b->acc_sum / b->acc_cnt, acum_acc);
-  LOGC(0, 'w', 'r', " ENT:%.2e", NumSumVec(b->ent, K));
-  LOGC(0, 'r', 'c', " NORM:%.2e", b->norm);
+  LOGC(0, 'w', 'r', " ENT:%.2e/%.2e", eem, ees);
   b->acc_sum = 0;
   b->acc_cnt = 0;
-  LOG(0, " [%d]", ppb_cnt);
-  if (ppb_cnt >= 10000) {
-    ppb_cnt = 0;
-    /* EvalQuestionAccuracy(model->tar, vcb, 30000); */
-  }
 #endif
   ppb_lock = 0;
   return;
@@ -160,9 +149,14 @@ void ModelInit() {
 
 int saved_iter_num = -1;
 void ModelSave(int iter_num) {
-  if (iter_num <= saved_iter_num) return;  // avoid thread racing
-  saved_iter_num = iter_num;
-  char* mfp = sformat("%s.part%d", V_MODEL_SAVE_PATH, iter_num);
+  char* mfp;
+  if (iter_num == -1) {                 // save final model
+    STR_CLONE(mfp, V_MODEL_SAVE_PATH);  // so that free(mfp) can work
+  } else {
+    if (iter_num <= saved_iter_num) return;  // avoid thread racing
+    saved_iter_num = iter_num;
+    mfp = sformat("%s.part%d", V_MODEL_SAVE_PATH, iter_num);
+  }
   FILE* fout = fopen(mfp, "wb");
   if (!fout) {
     LOG(0, "Error!\n");
@@ -194,18 +188,25 @@ void ModelFree() {
 
 void ModelGradUpdate(struct Model* m, int p, int i, real c, real* g) {
   // model minimization update: p=0: scr; p=1: tar
-  if (p == 0)  // update scr
+  if (p == 0) {  // update scr
     NumVecAddCVec(m->scr + i * N, g, -c * gd_ss, N);
-  else  // update tar
+  } else {  // update tar
     NumVecAddCVec(m->tar + i * N, g, -c * gd_ss, N);
+  }
   return;
 }
 
-void ModelShrink(struct Model* m, real w) {
+void ModelShrink(struct Model* m) {
   int i;
-  real c = 1 - w;
-  for (i = 0; i < V * N; i++) model->scr[i] *= c;
-  for (i = 0; i < V * N; i++) model->tar[i] *= c;
+  if (V_L2_REGULARIZATION_WEIGHT != 0) {
+    NumVecMulC(model->scr, 1 - V_L2_REGULARIZATION_WEIGHT, V * N);
+    NumVecMulC(model->tar, 1 - V_L2_REGULARIZATION_WEIGHT, V * N);
+  } else if (V_MODEL_PROJ_UNIT_BALL) {
+    for (i = 0; i < V; i++) {
+      NumVecProjUnitBall(m->scr + i * N, N);
+      NumVecProjUnitBall(m->tar + i * N, N);
+    }
+  }
   return;
 }
 
@@ -220,9 +221,6 @@ int DualDecode(real* h, struct Bookkeeping* b) {
       z = k;
     }
   }
-  // update bookkeeping: hh, hn
-  NumVecAddCVec(b->hh + z * N, h, 1.0, N);
-  b->hn[z]++;
   return z;
 }
 
@@ -232,29 +230,33 @@ int Update(int* ids, int l, struct Bookkeeping* b, struct Model* m,
   // primal = 0: used for burn-in
   // primal = 1: primal and dual update
   int offline_performed = 0;
-  int i, j, k, lt, rt, md;
+  int i, j, lt, rt, md;
   real h0[NUP], h[NUP], hw[SUP], wd[NUP * SUP], w0[NUP], w[NUP];
-  int z[SUP];
+  int zz;
   NumFillZeroVec(h0, N);
   NumFillZeroVec(w0, N);
-  for (i = 0; i < SMALLER(l, C - 1); i++)
+  for (i = 0; i < SMALLER(l, C); i++)
     NumVecAddCVec(h0, m->scr + ids[i] * N, 1, N);
   for (i = 0; i < l; i++) {
     lt = i - C - 1;
     rt = i + C;
     md = i;
-    if (lt >= 0) NumVecAddCVec(h0, m->scr + ids[lt] * N, -1, N);     // h0--
-    if (rt < l) NumVecAddCVec(h0, m->scr + ids[rt] * N, 1, N);       // h0++
-    hw[md] = 1.0 / (SMALLER(rt, l - 1) - LARGER(lt, 0));             // hw
-    NumAddCVecDVec(h0, m->scr + ids[md] * N, hw[i], -hw[md], N, h);  // h
-    z[md] = DualDecode(h, b);                                        // dcd z
+    if (lt >= 0) NumVecAddCVec(h0, m->scr + ids[lt] * N, -1, N);      // h0--
+    if (rt < l) NumVecAddCVec(h0, m->scr + ids[rt] * N, 1, N);        // h0++
+    hw[md] = 1.0 / (SMALLER(rt, l - 1) - LARGER(lt, 0));              // hw
+    NumAddCVecDVec(h0, m->scr + ids[md] * N, hw[md], -hw[md], N, h);  // h
+    zz = DualDecode(h, b);                                            // dcd z
+    // update bookkeeping: hh, hn
+    NumVecAddCVec(b->hh + zz * N, h, 1.0, N);
+    b->hn[zz]++;
 #ifdef DEBUG
-    b->acc_sum += b->dd[z[md] * V + ids[md]];
+    b->acc_sum += b->dd[zz * V + ids[md]];  // debug probability
     b->acc_cnt++;
 #endif
     if (primal) {                          // primal 1
       NumAddCVecDVec(m->tar + ids[i] * N,  // wd[i] <- w - ww
-                     b->ww + z[i] * N, 1, -1, N, wd + i * N);
+                     b->ww + zz * N, 1, -1, N, wd + i * N);
+      ModelGradUpdate(m, 1, ids[i], -1, h);  // up m->tar
       lt = i - 2 * C - 1;
       rt = i;
       md = i - C;
@@ -271,26 +273,20 @@ int Update(int* ids, int l, struct Bookkeeping* b, struct Model* m,
         } else
           break;
       }
-      ModelGradUpdate(m, 1, ids[i], -1, h);  // up m->tar
     }
-    if (b->hn[z[i]] >= max_hn) {  // offline
+    if (b->hn[zz] >= max_hn) {  // offline
       offline_performed = 1;
-      k = z[i];
       if (primal) {              // primal 2
         for (j = 0; j < V; j++)  // up m->tar (neg sampling)
-          ModelGradUpdate(m, 1, j, b->dd[k * V + j], b->hh + k * N);
-        ModelShrink(m, V_L2_REGULARIZATION_WEIGHT);
+          ModelGradUpdate(m, 1, j, b->dd[zz * V + j], b->hh + zz * N);
+        ModelShrink(m);
       }
-      NumVecMulC(b->hh + k * N, 1.0 / b->hn[k], N);              // hh
-      NumMulMatVec(m->tar, b->hh + k * N, V, N, b->dd + k * V);  // dd
-      NumVecMulC(b->dd + k * V, 2, V);
-#ifdef DEBUG
-      b->norm = NumVecNorm(b->dd + k * V, V);
-#endif
-      b->ent[k] = NumSoftMax(b->dd + k * V, V);                  // ent
-      NumMulVecMat(b->dd + k * V, m->tar, V, N, b->ww + k * N);  // ww
-      b->hn[k] = 0;                                              // reset hn[k]
-      NumFillZeroVec(b->hh + k * N, N);                          // reset hh[k]
+      NumVecMulC(b->hh + zz * N, 1.0 / b->hn[zz], N);              // hh
+      NumMulMatVec(m->tar, b->hh + zz * N, V, N, b->dd + zz * V);  // dd
+      b->ent[zz] = NumSoftMax(b->dd + zz * V, V);                  // ent
+      NumMulVecMat(b->dd + zz * V, m->tar, V, N, b->ww + zz * N);  // ww
+      b->hn[zz] = 0;                                               // reset hn
+      NumFillZeroVec(b->hh + zz * N, N);                           // reset hh
     }
   }
   return offline_performed;
@@ -304,10 +300,10 @@ void* ThreadWork(void* arg) {
     exit(1);
   }
   fseek(fin, 0, SEEK_END);
-  long int fpos;
   long int fsz = ftell(fin);
   long int fbeg = fsz / V_THREAD_NUM * tid;
   long int fend = fsz / V_THREAD_NUM * (tid + 1);
+  long int fpos = fbeg;
   struct Bookkeeping* b = BookkeepingCreate();
   LOG(2, "*");
   // burn in
@@ -316,11 +312,12 @@ void* ThreadWork(void* arg) {
   fseek(fin, fbeg, SEEK_SET);
   while (burn_in_left > 0) {
     wnum = TextReadSent(fin, vcb, wids, 1, 1);
-    if (wnum < 2) continue;
     burn_in_left -= wnum;
-    if (Update(wids, wnum, b, model, 0)) {
-      // nop
-    }
+    if (wnum > 1)
+      if (Update(wids, wnum, b, model, 0)) {
+        // nop
+      }
+    // ftell costs running time roughly 15/14 times of an addition operation
     if (feof(fin) || ftell(fin) >= fend) {
       fseek(fin, fbeg, SEEK_SET);
     }
@@ -332,21 +329,21 @@ void* ThreadWork(void* arg) {
   fseek(fin, fbeg, SEEK_SET);
   while (iter_num < V_ITER_NUM) {
     wnum = TextReadSent(fin, vcb, wids, 1, 1);
-    if (wnum < 2) continue;
-    if (Update(wids, wnum, b, model, 1)) {
-      // ftell cost running time roughly 15/14 times of an addition operation
-      fpos = ftell(fin);
-      progress[tid] = iter_num + (double)(fpos - fbeg) / (fend - fbeg);
-      // adjust gd_ss
-      p = GetProgress();
-      gd_ss = V_INIT_GRAD_DESCENT_STEP_SIZE * (1 - p);
-      // debug info
-      ThreadPrintProgBar(2, tid, p, b);
-      if (feof(fin) || fpos >= fend) {
-        fseek(fin, fbeg, SEEK_SET);
-        ModelSave(iter_num);
-        iter_num++;
+    if (wnum > 1)
+      if (Update(wids, wnum, b, model, 1)) {
+        // thread progress
+        progress[tid] = iter_num + (double)(fpos - fbeg) / (fend - fbeg);
+        // gd_ss
+        p = GetProgress();
+        gd_ss = V_INIT_GRAD_DESCENT_STEP_SIZE * (1 - p);
+        // debug info
+        ThreadPrintProgBar(2, tid, p, b);
       }
+    fpos = ftell(fin);
+    if (feof(fin) || fpos >= fend) {
+      fseek(fin, fbeg, SEEK_SET);
+      if (V_CACHE_INTERMEDIATE_MODEL) ModelSave(iter_num);
+      iter_num++;
     }
   }
   fclose(fin);
@@ -360,24 +357,35 @@ void ScheduleWork() {
   start_clock_t = clock();
   progress = (real*)malloc(V_THREAD_NUM * sizeof(real));
   NumFillZeroVec(progress, V_THREAD_NUM);
+  // included initialization
   VariableInit();
   NumInit();
-  vcb = TextLoadVocab(V_TEXT_VOCAB_PATH, V, V_VOCAB_HIGH_FREQ_CUTOFF);
-  // overwrite V by actual vocabulary size
+  // build vocab if necessary
+  if (!fexists(V_VOCAB_FILE_PATH) || V_VOCAB_OVERWRITE) {
+    vcb = TextBuildVocab(V_TEXT_FILE_PATH, 1, -1);
+    TextSaveVocab(V_VOCAB_FILE_PATH, vcb);
+  }
+  // load vocab and overwrite V by smaller actual vocabulary size
+  vcb = TextLoadVocab(V_VOCAB_FILE_PATH, V, V_VOCAB_HIGH_FREQ_CUTOFF);
   V = vcb->size;
   LOG(1, "Actual V: %d\n", V);
+  // initialization
   ModelInit();
-  shrink_w = 1 - V_L2_REGULARIZATION_WEIGHT;
   max_hn = V * V_OFFLINE_INTERVAL_VOCAB_RATIO;
+  // schedule thread jobs
   LOG(2, "Threads spawning: ");
   pthread_t* pt = (pthread_t*)malloc(V_THREAD_NUM * sizeof(pthread_t));
   for (tid = 0; tid < V_THREAD_NUM; tid++)
     pthread_create(&pt[tid], NULL, ThreadWork, (void*)tid);
   for (tid = 0; tid < V_THREAD_NUM; tid++) pthread_join(pt[tid], NULL);
+  // save model
+  ModelSave(-1);
+  // free memory
   ModelFree();
   VocabDestroy(vcb);
-  LOG(2, "\n");
-  LOG(1, "Training finished\n");
+  free(progress);
+  free(pt);
+  LOG(1, "\nTraining finished\n");
 }
 
 int main(int argc, char* argv[]) {

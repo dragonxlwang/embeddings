@@ -106,7 +106,7 @@ int CmpVal(const void* x, const void* y) {
   return value_for_compare[*((int*)y)] - value_for_compare[*((int*)x)];
 }
 
-void VocabReduce(struct Vocabulary* vcb, int cap) {
+void VocabReduce(struct Vocabulary* vcb, int cap) {  // if cap = -1,  no limit
   int i;
   int* keys = (int*)malloc(vcb->size * sizeof(int));
   for (i = 0; i < vcb->size; i++) keys[i] = i;
@@ -151,6 +151,13 @@ long long int TEXT_CORPUS_FILE_SIZE = 0;  // corpus file size
 
 int TextReadWord(FILE* fin, char* str) {
   // return flag: 0=hit by space or tab; 1=newline; 2=end-of-file
+  // 1: read non-whitespaces until hit character otherwise
+  // 2: skip all whitespaces until hit end-of-file or non-whitespace character
+  //    for stdin, stop skipping also when hit newline
+  // return flag:
+  //    if EOF ever hit: return 2
+  //    otherwise if newline ever hit: return 1
+  //    otherwise return 0 (hit space or tab)
   int i = 0, flag = -1;
   char ch;
   while (1) {
@@ -160,9 +167,9 @@ int TextReadWord(FILE* fin, char* str) {
   }
   str[i] = '\0';
   while (1) {
-    if (ch == ' ' || ch == '\t')
-      flag = 0;
-    else if (ch == '\n' || ch == '\r') {
+    if (ch == ' ' || ch == '\t') {
+      if (flag != 1) flag = 0;
+    } else if (ch == '\n' || ch == '\r') {
       flag = 1;
       if (fin == stdin) break;
     } else if (ch == EOF) {
@@ -216,7 +223,7 @@ int TextNormWord(char* str, int if_lower, int if_rm_trail_punc) {
 }
 
 struct Vocabulary* TextBuildVocab(char* text_file_path, int if_norm_word,
-                                  int cap) {
+                                  int cap) {  // cap = -1 if no limit
   char str[TEXT_MAX_WORD_LEN];
   int flag = 0;
   struct Vocabulary* vcb = VocabCreate(TEXT_INIT_VCB_CAP);
@@ -289,20 +296,23 @@ struct Vocabulary* TextLoadVocab(char* vcb_fp, int cap, int high_freq_cutoff) {
 
 int TextReadSent(FILE* fin, struct Vocabulary* vcb, int* word_ids,
                  int if_norm_word, int till_line_end) {
+  // if till_line_end = 1, each line is one sentence
+  // else, line is delimited by punctuation (newline alone won't stop reading)
+  // EOF info is not exposed to caller function
   char str[TEXT_MAX_WORD_LEN];
-  int flag1, flag2 = 0, id;
+  int flag1 = 0, flag2 = 0, id;
   int word_num = 0;
-  while (1) {
+  while (flag1 != 2) {
     flag1 = TextReadWord(fin, str);
     if (if_norm_word) flag2 = TextNormWord(str, 1, 1);
     if (str[0] == '\0')
       id = -1;  // empty string
     else
       id = VocabGetId(vcb, str);  // non-empty string
-    if (id != -1 && word_num < TEXT_MAX_SENT_WCT) word_ids[word_num++] = id;
-    if ((till_line_end && flag1 > 0) || (flag1 > 0 || flag2 == 1)) break;
+    if (id != -1) word_ids[word_num++] = id;
+    if (word_num == TEXT_MAX_SENT_WCT) break;
+    if ((till_line_end && flag1 > 0) || (!till_line_end && flag2 == 1)) break;
   }
-  if (flag1 == 2) word_num = -1;
   return word_num;
 }
 
