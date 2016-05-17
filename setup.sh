@@ -22,7 +22,7 @@ fi
 
 if [[ ! -d ~/data/w2v ]]; then
   mkdir ~/data/w2v
-  pushd ~/data > /dev/null
+  pushd ~/data/w2v > /dev/null
   curl -OL \
     http://timan102.cs.illinois.edu/~xwang95/data/w2v/questions-phrases.txt
   curl -OL \
