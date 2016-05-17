@@ -5,8 +5,9 @@
 # download data if necessary
 mkdir -p ~/data
 if [[ ! -d ~/data/text8 ]]; then
-  pushd ~/data > /dev/null
-  curl -OL http://timan102.cs.illinois.edu/~xwang95/data/text8.gz
+  mkdir ~/data/text8
+  pushd ~/data/text8 > /dev/null
+  curl -OL http://timan102.cs.illinois.edu/~xwang95/data/text8/text8.gz
   gunzip text8.gz
   popd > /dev/null
 fi
