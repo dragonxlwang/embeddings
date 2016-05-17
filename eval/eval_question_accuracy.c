@@ -7,9 +7,10 @@
 #include "../utils/util_text.c"
 #include "../vectors/variables.c"
 
-char* EV_QUESTION_FILE_PATH = "/home/xwang95/workspace/w2v/questions-words.txt";
+char* EV_QUESTION_FILE_PATH = "~/data/w2v/questions-words.txt";
 
 void EvalQuestionAccuracy(real* e, struct Vocabulary* vcb, int V) {
+  EV_QUESTION_FILE_PATH = FilePathExpand(EV_QUESTION_FILE_PATH);
   char st1[WUP], st2[WUP], st3[WUP], st4[WUP];
   real vec[NUP];
   FILE* fin = fopen(EV_QUESTION_FILE_PATH, "rb");

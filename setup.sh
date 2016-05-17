@@ -20,4 +20,12 @@ if [[ ! -d ~/data/gigaword ]]; then
   popd > /dev/null
 fi
 
-
+if [[ ! -d ~/data/w2v ]]; then
+  mkdir ~/data/w2v
+  pushd ~/data > /dev/null
+  curl -OL \
+    http://timan102.cs.illinois.edu/~xwang95/data/w2v/questions-phrases.txt
+  curl -OL \
+    http://timan102.cs.illinois.edu/~xwang95/data/w2v/questions-words.txt
+  popd > /dev/null
+fi
