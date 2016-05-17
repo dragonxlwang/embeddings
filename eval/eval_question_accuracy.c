@@ -100,8 +100,9 @@ void EvalQuestionAccuracy(real* e, struct Vocabulary* vcb, int V) {
 real *tar, *scr;
 /* char* EV_MODEL_FILE_PATH = "/home/xwang95/data/gigaword/giga_nyt.mdl.part1";
  */
-char* EV_MODEL_FILE_PATH = "/home/xwang95/data/text8/text8.mdl";
+char* EV_MODEL_FILE_PATH = "~/data/text8/text8.mdl";
 void ModelLoad() {
+  EV_MODEL_FILE_PATH = FilePathExpand(EV_MODEL_FILE_PATH);
   FILE* fin = fopen(EV_MODEL_FILE_PATH, "rb");
   if (!fin) {
     LOG(0, "Error!\n");
