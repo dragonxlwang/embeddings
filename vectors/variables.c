@@ -20,54 +20,67 @@
 char *V_TEXT_FILE_PATH = "~/data/text8/text8";
 char *V_VOCAB_FILE_PATH = NULL;  // don't set it if can be inferred from above
 char *V_MODEL_SAVE_PATH = NULL;
-int V_THREAD_NUM = 20;
-int V_ITER_NUM = 15;
+char *V_PEEK_FILE_PATH = NULL;
+int V_THREAD_NUM = 1;
+int V_ITER_NUM = 20;
 // every this number times vocabulary online updates perform one offline update
-real V_OFFLINE_INTERVAL_VOCAB_RATIO = 0.1;
-// for dual burn in, run this number times vocabulary online updates
-real V_BURN_IN_INTERVAL_VOCAB_RATIO = 5;
+real V_OFFLINE_INTERVAL_VOCAB_RATIO = 1;
 // Initial grad descent step size
-real V_INIT_GRAD_DESCENT_STEP_SIZE = 1e-3;
+real V_INIT_GRAD_DESCENT_STEP_SIZE = 1e-2;
 // Model Shrink: l-2 regularization:
 real V_L2_REGULARIZATION_WEIGHT = 0;  // 1e-3;
+// Peek sampling rate
+real V_PEEK_SAMPLE_RATE = 1e-3;
 // Model Shrink: if proj model to unit ball
 int V_MODEL_PROJ_UNIT_BALL = 0;
 // Vocab loading option: cut-off high frequent (stop) words
-int V_VOCAB_HIGH_FREQ_CUTOFF = 80;
+int V_VOCAB_HIGH_FREQ_CUTOFF = 0;
 // if cache model per iteration
 int V_CACHE_INTERMEDIATE_MODEL = 0;
 // if overwrite vocab file
 int V_VOCAB_OVERWRITE = 0;
-// Dimension for embedding, number of dual cluster, vocabulary size cap, and
-// context length
-int N = 100;
-int K = 100;
-int V = 100000;  // set to -1 if no limit
-int C = 5;
+// if overwrite peek file
+int V_PEEK_OVERWRITE = 1;
+// Number of negative words updated online
+int V_NEG_ONLINE_UPDATE_NUM = 0;
+int N = 100;   // embedding dimension
+int K = 20;    // number of dual cluster
+int V = 1000;  // vocabulary size cap, set to -1 if no limit
+int C = 5;     // context length
 
 void PrintConfigInfo() {
   LOG(1, "Input File                                        : %s\n",
       V_TEXT_FILE_PATH);
   LOG(1, "Vocab File                                        : %s\n",
       V_VOCAB_FILE_PATH);
+  LOG(1, "Model Save                                        : %s\n",
+      V_MODEL_SAVE_PATH);
+  LOG(1, "Peek File                                         : %s\n",
+      V_PEEK_FILE_PATH);
   LOG(1, "Thread Num                                        : %d\n",
       V_THREAD_NUM);
   LOG(1, "Iterations                                        : %d\n",
       V_ITER_NUM);
   LOG(1, "Offline interval / online update / vocabulary size: %lf\n",
       (double)V_OFFLINE_INTERVAL_VOCAB_RATIO);
-  LOG(1, "Burn-in interval / online update / vocabulary size: %lf\n",
-      (double)V_BURN_IN_INTERVAL_VOCAB_RATIO);
   LOG(1, "Initial Grad Descent Step Size                    : %lf\n",
       (double)V_INIT_GRAD_DESCENT_STEP_SIZE);
   LOG(1, "L2 Regularization Weight                          : %lf\n",
       (double)V_L2_REGULARIZATION_WEIGHT);
+  LOG(1, "Peek Sampling Rate                                : %lf\n",
+      (double)V_PEEK_SAMPLE_RATE);
+  LOG(1, "Model Inside Unit Ball                            : %d\n",
+      V_MODEL_PROJ_UNIT_BALL);
   LOG(1, "Vocabulary high-freq words cut-off                : %d\n",
       V_VOCAB_HIGH_FREQ_CUTOFF);
   LOG(1, "Cache intermediate models                         : %d\n",
       V_CACHE_INTERMEDIATE_MODEL);
   LOG(1, "Overwrite vocabulary file                         : %d\n",
       V_VOCAB_OVERWRITE);
+  LOG(1, "Overwrite peek file                               : %d\n",
+      V_PEEK_OVERWRITE);
+  LOG(1, "Negative online update word number                : %d\n",
+      V_NEG_ONLINE_UPDATE_NUM);
   LOG(1, "Dimension N -- word embedding dim                 : %d\n", N);
   LOG(1, "Dimension K -- dual cluster number                : %d\n", K);
   LOG(1, "Dimension V -- vocabulary size cap                : %d\n", V);
@@ -107,9 +120,15 @@ void VariableInit() {
     V_MODEL_SAVE_PATH = FilePathSubExtension(V_TEXT_FILE_PATH, "mdl");
   else
     V_MODEL_SAVE_PATH = FilePathExpand(V_MODEL_SAVE_PATH);
+  if (!V_PEEK_FILE_PATH)
+    V_PEEK_FILE_PATH = FilePathSubExtension(V_TEXT_FILE_PATH, "pek");
+  else
+    V_PEEK_FILE_PATH = FilePathExpand(V_PEEK_FILE_PATH);
   // define util_text constant variables
   TEXT_MAX_WORD_LEN = WUP;
   TEXT_MAX_SENT_WCT = SUP;
+  // use perm file instead of original
+  V_TEXT_FILE_PATH = sformat("%s.perm", V_TEXT_FILE_PATH);
   PrintConfigInfo();
   return;
 }

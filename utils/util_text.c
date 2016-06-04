@@ -324,6 +324,13 @@ void TextPrintSent(struct Vocabulary* vcb, int* word_ids, int word_num) {
   return;
 }
 
+void TextPrintSentWord(struct Vocabulary* vcb, int* word_ids, int word_num) {
+  int i;
+  for (i = 0; i < word_num; i++) printf("%s ", VocabGetWord(vcb, word_ids[i]));
+  printf("\n");
+  return;
+}
+
 /*
    long long int neg_unigram_size = 1e8;
    void InitNegUnigram()

@@ -14,10 +14,19 @@ void EvalQuestionAccuracy(real* e, struct Vocabulary* vcb, int V) {
   char st1[WUP], st2[WUP], st3[WUP], st4[WUP];
   real vec[NUP];
   FILE* fin = fopen(EV_QUESTION_FILE_PATH, "rb");
-  int TCN = 0, QID = 0, CCN = 0, CACN = 0, TACN = 0, SEAC = 0, SECN = 0,
-      SYAC = 0, SYCN = 0, TQ = 0, TQS = 0;
+  int TOPCNT = 1;  // top count: 10
+  int TCN = 0;     // group count
+  int CCN = 0;     // group correct
+  int QID = 0;     // group id
+  int CACN = 0;    // total correct
+  int TACN = 0;    // total count
+  int SEAC = 0;    // semantic correct
+  int SECN = 0;    // semantic count
+  int SYAC = 0;    // syntactic correct
+  int SYCN = 0;    // syntactic count
+  int TQ = 0;      // total question count
+  int TQS = 0;     // questions  passed unk test
   int a, b1, b2, b3, b4, c;
-  int TOPCNT = 1;
   heap* h = HeapCreate(TOPCNT);
   real len;
   real max_len = 0, sum_len = 0;
@@ -39,8 +48,9 @@ void EvalQuestionAccuracy(real* e, struct Vocabulary* vcb, int V) {
         printf("ACCURACY TOP%d: %.2f %%  (%d / %d)\n", TOPCNT,
                CCN / (float)TCN * 100, CCN, TCN);
         printf(
-            "Total accuracy: %.2f %%   Semantic accuracy: %.2f %%   Syntactic "
-            "accuracy: %.2f %% \n",
+            "Total accuracy: %.2f %%   "
+            "Semantic accuracy: %.2f %%   "
+            "Syntactic accuracy: %.2f %% \n",
             CACN / (float)TACN * 100, SEAC / (float)SECN * 100,
             SYAC / (float)SYCN * 100);
       }
@@ -67,7 +77,7 @@ void EvalQuestionAccuracy(real* e, struct Vocabulary* vcb, int V) {
     if (b1 == -1 || b2 == -1 || b3 == -1 || b4 == -1) continue;  // UNK
     if (b1 >= V || b2 >= V || b3 >= V || b4 >= V) continue;      // exceed V
     TQS++;
-    NumAddCVecDVec(e + b1 * N, e + b2 * N, 1, -1, N, vec);
+    NumAddCVecDVec(e + b2 * N, e + b1 * N, 1, -1, N, vec);
     NumVecAddCVec(vec, e + b3 * N, 1, N);
     for (c = 0; c < V; c++) {
       if (c == b1 || c == b2 || c == b3) continue;
@@ -98,8 +108,6 @@ void EvalQuestionAccuracy(real* e, struct Vocabulary* vcb, int V) {
 }
 
 real *tar, *scr;
-/* char* EV_MODEL_FILE_PATH = "/home/xwang95/data/gigaword/giga_nyt.mdl.part1";
- */
 char* EV_MODEL_FILE_PATH = "~/data/text8/text8.mdl";
 void ModelLoad() {
   EV_MODEL_FILE_PATH = FilePathExpand(EV_MODEL_FILE_PATH);
@@ -123,9 +131,10 @@ void ModelLoad() {
 
 int main() {
   VariableInit();
+  NumInit();
   struct Vocabulary* vcb =
       TextLoadVocab(V_VOCAB_FILE_PATH, V, V_VOCAB_HIGH_FREQ_CUTOFF);
   ModelLoad();
-  EvalQuestionAccuracy(tar, vcb, 10000);
+  EvalQuestionAccuracy(tar, vcb, SMALLER(10000, V));
   return 0;
 }

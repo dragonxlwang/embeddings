@@ -35,6 +35,7 @@ real NumExp(real x) {
 
 unsigned long long int RANDOM_SEED = 0x0F0F0F0FL;
 real NumRand() {
+  // return a random number range from [0, 1)
   RANDOM_SEED = ((RANDOM_SEED * 0x5DEECE66DL + 0x0A) & 0xFFFFFFFFFFFFL);
   return ((real)RANDOM_SEED / ((real)0xFFFFFFFFFFFFL));
 }
@@ -42,6 +43,19 @@ real NumRand() {
 void NumRandFillVec(real *arr, int l, real lb, real ub) {
   int i;
   for (i = 0; i < l; i++) arr[i] = lb + NumRand() * (ub - lb);
+  return;
+}
+
+void NumPermuteIntVec(int *arr, int l, real permute_ratio) {
+  // pairwise permute array l * permute_ratio times
+  int cnt = permute_ratio * l;
+  int i, j;
+  while (cnt-- > 0) {
+    i = NumRand() * l;
+    j = NumRand() * (l - 1);
+    if (j >= i) j++;
+    SWAP(arr[i], arr[j]);
+  }
   return;
 }
 
@@ -210,7 +224,7 @@ real NumVecL2Dist(real *a, real *b, int l) {
   real s = 0;
   int i;
   for (i = 0; i < l; i++) s += (a[i] - b[i]) * (a[i] - b[i]);
-  return s;
+  return sqrt(s);
 }
 
 real NumVecCos(real *a, real *b, int l) {
@@ -278,7 +292,7 @@ real NumSoftMax(real *a, int l) {
   }
   for (i = 0; i < l; i++) a[i] /= s;
   e = -e / s + log(s);
-  return e;
+  return (e > 0) ? e : 0;
 }
 
 void NumVecProjUnitSphere(real *a, int l) {
@@ -342,7 +356,8 @@ real NumVecMean(real *a, int l) { return NumSumVec(a, l) / l; }
 real NumVecVar(real *a, int l) {
   real x = NumVecNorm(a, l);
   real y = NumVecMean(a, l);
-  return x * x / l - y * y;
+  real s = x * x / l - y * y;
+  return (s > 0) ? s : 0;
 }
 
 real NumVecStd(real *a, int l) { return sqrt(NumVecVar(a, l)); }
