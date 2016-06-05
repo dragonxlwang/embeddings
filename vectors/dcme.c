@@ -29,7 +29,7 @@ struct Bookkeeping {
   real* ww;   // list(K):vector(N) W * dd, synthesis word in prime
   real* hh;   // list(K):vector(N) avg(h_k), sufficient stats
   int* hn;    // list(K): |h_k|
-  int* tw;    // list(K):list(V_NEG_ONLINE_UPDATE_NUM) top words
+  int* tw;    // list(K):list(Q) top words
   real* www;  // debug use
 };
 
@@ -119,6 +119,7 @@ struct Bookkeeping* BookkeepingCreate() {
   b->ww = NumNewHugeVec(N * K);
   b->hh = NumNewHugeVec(N * K);
   b->hn = NumNewHugeIntVec(K);
+  b->tw = NumNewHugeIntVec(Q * K);
   NumRandFillVec(b->hh, N * K, -1e-1, 1e-1);
   NumFillValIntVec(b->hn, K, 1);
   return b;
@@ -281,23 +282,8 @@ int DualDecode(real* h, struct Bookkeeping* b) {
 
 void DualUpdate(int zz, struct Bookkeeping* b, struct Model* m, heap* twh) {
   int j;
-  int Q = V_NEG_ONLINE_UPDATE_NUM;
-  NumVecMulC(b->hh + zz * N, 1.0 / b->hn[zz], N);              // hh
-  NumMulMatVec(m->tar, b->hh + zz * N, V, N, b->dd + zz * V);  // dd
-  /* #ifdef DEBUG */
-  /* LOGC(0, 'g', 'k', "====================\n"); */
-  /* pair* ps = sorted(b->dd + zz * V, V, 1); */
-  /* for (j = 0; j < 50; j++) { */
-  /*   int k = ps[j].key; */
-  /*   printf("[%d-%04d-%04d] %15s: d=%11.4e \t\t n=%11.4e \t\t cos=%11.4e\n",
-   * zz, */
-  /*          j, k, VocabGetWord(vcb, k), b->dd[zz * V + k], */
-  /*          NumVecNorm(m->tar + k * N, N), */
-  /*          NumVecCos(m->tar + k * N, b->hh + zz * N, N)); */
-  /* } */
-  /* free(ps); */
-  /* LOGC(0, 'g', 'k', "====================\n"); */
-  /* #endif */
+  NumVecMulC(b->hh + zz * N, 1.0 / b->hn[zz], N);               // hh avg
+  NumMulMatVec(m->tar, b->hh + zz * N, V, N, b->dd + zz * V);   // dd
   b->ent[zz] = NumSoftMax(b->dd + zz * V, V);                   // ent (sm)
   HeapEmpty(twh);                                               // tw reset
   for (j = 0; j < V; j++) HeapPush(twh, j, b->dd[zz * V + j]);  // tw add
@@ -319,7 +305,6 @@ int Update(int* ids, int l, struct Bookkeeping* b, struct Model* m, heap* twh) {
   int i, j, k, lt, rt, md;
   real h0[NUP], h[NUP], hw[SUP], wd[NUP * SUP], w0[NUP], w[NUP];
   int zz;
-  int Q = V_NEG_ONLINE_UPDATE_NUM;
   int neg_id;
   /* int window = NumRand() * C + 1; */
   int window = C;
@@ -432,7 +417,7 @@ int Update(int* ids, int l, struct Bookkeeping* b, struct Model* m, heap* twh) {
 void* ThreadWork(void* arg) {
   int k;
   int tid = (long)arg;
-  heap* twh = HeapCreate(V_NEG_ONLINE_UPDATE_NUM);
+  heap* twh = HeapCreate(Q);
   FILE* fin = fopen(V_TEXT_FILE_PATH, "rb");
   if (!fin) {
     LOG(0, "Error!\n");
