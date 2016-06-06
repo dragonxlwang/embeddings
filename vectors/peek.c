@@ -15,23 +15,32 @@ real PeekEval(real *scr, real *tar, int **peek_wids, int *peek_wnum, int size) {
   // evaluate on peek set
   // to speed up, we constrain competitive target words from top 10k words
   int i, j, k, lt, rt, md;
-  int topk, *ids, l, pn = 0;
+  int topk, *ids, l, pn = 0, h0n;
   topk = PEEK_TOP_K;
   real *p = (real *)malloc(topk * sizeof(real));
   real h0[NUP], h[NUP], hw, avgp = 0;
   for (i = 0; i < size; i++) {
     ids = peek_wids[i];
     l = peek_wnum[i];
+    h0n = 0;
     NumFillZeroVec(h0, N);
-    for (j = 0; j < SMALLER(l, C); j++)
+    for (j = 0; j < SMALLER(l, C); j++) {
       NumVecAddCVec(h0, scr + ids[j] * N, 1, N);
+      h0n++;
+    }
     for (j = 0; j < l; j++) {
       lt = j - C - 1;
       rt = j + C;
       md = j;
-      if (lt >= 0) NumVecAddCVec(h0, scr + ids[lt] * N, -1, N);
-      if (rt < l) NumVecAddCVec(h0, scr + ids[rt] * N, 1, N);
-      hw = 1.0 / (SMALLER(rt, l - 1) - LARGER(lt, 0));
+      if (rt < l) {
+        NumVecAddCVec(h0, scr + ids[rt] * N, 1, N);
+        h0n++;
+      }
+      if (lt >= 0) {
+        NumVecAddCVec(h0, scr + ids[lt] * N, -1, N);
+        h0n--;
+      }
+      hw = 1.0 / (h0n - 1.0);
       NumAddCVecDVec(h0, scr + ids[md] * N, hw, -hw, N, h);
       if (ids[j] < topk) {
         for (k = 0; k < topk; k++) p[k] = NumVecDot(h, tar + k * N, N);

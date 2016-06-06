@@ -56,6 +56,10 @@ real GetProgress() {
   return p;
 }
 
+#ifdef DEBUG
+int dual_update_cnt = 0;
+int dual_update_cluster_cnt[1000] = {0};
+#endif
 int ppb_lock = 0;
 void ThreadPrintProgBar(int dbg_lvl, int tid, real p, struct Bookkeeping* b) {
   if (ppb_lock) return;
@@ -87,12 +91,49 @@ void ThreadPrintProgBar(int dbg_lvl, int tid, real p, struct Bookkeeping* b) {
   real tt = NumMatMaxRowNorm(model->tar, V, N);
   LOG(0, " scr=%.2e/%.2ess", scr, scr / ss);
   LOG(0, " tar=%.2e/%.2ett", tar, tar / tt);
+  LOGC(0, 'r', 'k', " ss=%.2e", ss);
   LOGC(0, 'r', 'k', " tt=%.2e", tt);
   real eem = NumVecMean(b->ent, K);
   real ees = NumVecStd(b->ent, K);
   LOGC(0, 'w', 'r', " ENT:%.2e/%.2e", eem, ees);
   real avgp = PeekEval(model->scr, model->tar, peek_wids, peek_wnum, peek_size);
   LOGC(0, 'r', 'c', " PEEK:%.2e", avgp);
+#endif
+#ifdef DEBUG
+  /* FILE* fout_tmp = fopen("tmp.txt", "wb"); */
+  /* pair* pairs = sorted(b->dd + zz * V, V, 1); */
+  /* for (j = 0; j < V; j++) { */
+  /*   fprintf(fout_tmp, "%d: %8d, %-20s %.6e\n", j, pairs[j].key, */
+  /*           VocabGetWord(vcb, pairs[j].key), pairs[j].val); */
+  /* } */
+  /* fclose(fout_tmp); */
+
+  /* printf("TT=%11.6e hh=%11.6e ww=%11.6e ent=%11.6e\n", */
+  /*        NumMatMaxRowNorm(m->tar, V, N), NumVecNorm(b->hh + zz * N, N), */
+  /*        NumVecNorm(b->ww + zz * N, N), b->ent[zz]); */
+  printf("\n");
+  pair* dps = sortedi(dual_update_cluster_cnt, K, 1);
+  int j, k;
+  for (j = 0; j < K; j++) {
+    if (j % 5 == 0 && j != 0) printf("\n");
+    k = dps[j].key;
+    LOGC(0, 'y', 'k', "[%02d]:%.3lf:", k,
+         (real)dual_update_cluster_cnt[k] / (dual_update_cnt + 1));
+    LOGC(0, 'c', 'k', "%.2e", b->ent[k]);
+  }
+  free(dps);
+/* pair* ps = sorted(b->dd + zz * V, V, 1); */
+/* int printed_adw_cnt = 0; */
+/* for (j = 0; j < V; j++) { */
+/*   k = ps[j].key; */
+/*   if (b->dd[zz * V + k] > 10.0 / V) { */
+/*     // abonormal distribution weight */
+/*     LOGC(0, 'g', 'k', "[TW:%02d-W:%04d] %15s = %.6lf\n", zz, k, */
+/*          VocabGetWord(vcb, k), b->dd[zz * V + k]); */
+/*     if (printed_adw_cnt++ >= 50) break; */
+/*   } */
+/* } */
+/* free(ps); */
 #endif
   ppb_lock = 0;
   return;
@@ -174,7 +215,7 @@ void ModelGradUpdate(struct Model* m, int p, int i, real c, real* g) {
 
 void ModelShrink(struct Model* m) {
   int i;
-  if (V_L2_REGULARIZATION_WEIGHT != 0) {
+  if (V_L2_REGULARIZATION_WEIGHT) {
     NumVecMulC(model->scr, 1 - V_L2_REGULARIZATION_WEIGHT, V * N);
     NumVecMulC(model->tar, 1 - V_L2_REGULARIZATION_WEIGHT, V * N);
   } else if (V_MODEL_PROJ_UNIT_BALL) {
@@ -215,35 +256,40 @@ void DualUpdate(int zz, struct Bookkeeping* b, struct Model* m, heap* twh) {
 }
 
 void DualReset(int zz, struct Bookkeeping* b) {  // use previous round as prior
-  b->hn[zz] /= 2;                                // reset hn to half
-  NumVecMulC(b->hh + zz * N, 0.5, N);            // reset hh to half
+  b->hn[zz] *= 0.1;                              // reset hn by decay
+  NumVecMulC(b->hh + zz * N, 0.1, N);            // reset hh by decay
+  /* b->hn[zz] = 0;                      // reset hn to half */
   /* NumFillZeroVec(b->hh + zz * N, N);  // reset hh to half */
 }
 
-int dual_update_cnt = 0;
-#ifdef DEBUG
-int dual_update_cluster_cnt[1000] = {0};
-#endif
 int Update(int* ids, int l, struct Bookkeeping* b, struct Model* m, heap* twh) {
   // dual/primal update for one sentence (ids, l)
   int offline_performed = 0;
   int i, j, k, lt, rt, md;
   real h0[NUP], h[NUP], hw[SUP], wd[NUP * SUP], w0[NUP], w[NUP];
-  int zz;
+  int zz, h0n = 0;
   int neg_id;
   /* int window = NumRand() * C + 1; */
   int window = C;
   NumFillZeroVec(h0, N);
   NumFillZeroVec(w0, N);
-  for (i = 0; i < SMALLER(l, window); i++)
+  for (i = 0; i < SMALLER(l, window); i++) {
     NumVecAddCVec(h0, m->scr + ids[i] * N, 1, N);
+    h0n++;
+  }
   for (i = 0; i < l; i++) {
     lt = i - window - 1;
     rt = i + window;
     md = i;
-    if (rt < l) NumVecAddCVec(h0, m->scr + ids[rt] * N, 1, N);        // h0++
-    if (lt >= 0) NumVecAddCVec(h0, m->scr + ids[lt] * N, -1, N);      // h0--
-    hw[md] = 1.0 / (SMALLER(rt, l - 1) - LARGER(lt, 0) - 1);          // hw
+    if (rt < l) {
+      NumVecAddCVec(h0, m->scr + ids[rt] * N, 1, N);                  // h0++
+      h0n++;                                                          // h0n++
+    }                                                                 //
+    if (lt >= 0) {                                                    //
+      NumVecAddCVec(h0, m->scr + ids[lt] * N, -1, N);                 // h0--
+      h0n--;                                                          // h0n--
+    }                                                                 //
+    hw[md] = 1.0 / (h0n - 1.0);                                       // hw
     NumAddCVecDVec(h0, m->scr + ids[md] * N, hw[md], -hw[md], N, h);  // h
     zz = DualDecode(h, b);                                            // dcd z
     NumVecAddCVec(b->hh + zz * N, h, 1.0, N);                         // b->hh
@@ -280,46 +326,11 @@ int Update(int* ids, int l, struct Bookkeeping* b, struct Model* m, heap* twh) {
           ModelGradUpdate(m, 1, j, b->dd[zz * V + j], b->hh + zz * N);
       ModelShrink(m);             // optional model shrink
       DualUpdate(zz, b, m, twh);  // dual update based on hh and hn
+      DualReset(zz, b);           // reset hh and hn
 #ifdef DEBUG
-      /* FILE* fout_tmp = fopen("tmp.txt", "wb"); */
-      /* pair* pairs = sorted(b->dd + zz * V, V, 1); */
-      /* for (j = 0; j < V; j++) { */
-      /*   fprintf(fout_tmp, "%d: %8d, %-20s %.6e\n", j, pairs[j].key, */
-      /*           VocabGetWord(vcb, pairs[j].key), pairs[j].val); */
-      /* } */
-      /* fclose(fout_tmp); */
-      LOGC(0, 'c', 'k', "\n=> [%d]: dual update on cluster %d\n",
-           dual_update_cnt, zz);
-      printf("TT=%11.6e hh=%11.6e ww=%11.6e ent=%11.6e\n",
-             NumMatMaxRowNorm(m->tar, V, N), NumVecNorm(b->hh + zz * N, N),
-             NumVecNorm(b->ww + zz * N, N), b->ent[zz]);
-      dual_update_cluster_cnt[zz]++;
-      pair* dps = sortedi(dual_update_cluster_cnt, K, 1);
-      for (j = 0; j < K; j++) {
-        if (j % 25 == 0 && j != 0) printf("\n");
-        k = dps[j].key;
-        int color_code = 'y';
-        if (k == zz) color_code = 'g';
-        LOGC(0, color_code, 'k', "[%02d]:%.3lf ", k,
-             (real)dual_update_cluster_cnt[k] / (dual_update_cnt + 1));
-      }
-      printf("\n");
-      free(dps);
-      pair* ps = sorted(b->dd + zz * V, V, 1);
-      int printed_adw_cnt = 0;
-      for (j = 0; j < V; j++) {
-        k = ps[j].key;
-        if (b->dd[zz * V + k] > 10.0 / V) {
-          // abonormal distribution weight
-          LOGC(0, 'g', 'k', "[TW:%02d-W:%04d] %15s = %.6lf\n", zz, k,
-               VocabGetWord(vcb, k), b->dd[zz * V + k]);
-          if (printed_adw_cnt++ >= 50) break;
-        }
-      }
-      free(ps);
       dual_update_cnt++;
+      dual_update_cluster_cnt[zz]++;
 #endif
-      DualReset(zz, b);  // reset hh and hn
     }
   }
   return offline_performed;
@@ -385,7 +396,7 @@ void ScheduleWork() {
   }
   vcb = TextLoadVocab(V_VOCAB_FILE_PATH, V, V_VOCAB_HIGH_FREQ_CUTOFF);
   V = vcb->size;
-  LOG(1, "Actual V: %d\n", V);
+  LOG(1, "Actual V  : %d\n", V);
   // build peek set if necessary, and load
   if (!fexists(V_PEEK_FILE_PATH) || V_PEEK_OVERWRITE) {
     LOG(0, "[TASK]: build peek set\n");
@@ -397,6 +408,7 @@ void ScheduleWork() {
                         peek_wnum, peek_size, vcb);
   }
   peek_size = PeekLoadSentSet(V_PEEK_FILE_PATH, &peek_wids, &peek_wnum);
+  LOG(1, "Peek size : %d\n", peek_size);
   // initialization
   ModelInit();
   max_hn = V * V_OFFLINE_INTERVAL_VOCAB_RATIO;
