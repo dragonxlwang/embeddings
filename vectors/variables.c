@@ -23,11 +23,11 @@ char *V_VOCAB_FILE_PATH = NULL;  // don't set it if can be inferred from above
 char *V_MODEL_SAVE_PATH = NULL;
 char *V_PEEK_FILE_PATH = NULL;
 int V_THREAD_NUM = 1;
-int V_ITER_NUM = 20;
+int V_ITER_NUM = 5;
 // every this number times vocabulary online updates perform one offline update
 real V_OFFLINE_INTERVAL_VOCAB_RATIO = 1;
 // Initial grad descent step size
-real V_INIT_GRAD_DESCENT_STEP_SIZE = 1e-2;
+real V_INIT_GRAD_DESCENT_STEP_SIZE = 5e-3;
 // Model Shrink: l-2 regularization:
 real V_L2_REGULARIZATION_WEIGHT = 0;  // 1e-3;
 // Peek sampling rate
@@ -35,7 +35,7 @@ real V_PEEK_SAMPLE_RATE = 1e-3;
 // Model Shrink: if proj model to unit ball
 int V_MODEL_PROJ_UNIT_BALL = 0;
 // Vocab loading option: cut-off high frequent (stop) words
-int V_VOCAB_HIGH_FREQ_CUTOFF = 0;
+int V_VOCAB_HIGH_FREQ_CUTOFF = 80;
 // if cache model per iteration
 int V_CACHE_INTERMEDIATE_MODEL = 0;
 // if overwrite vocab file
@@ -133,7 +133,7 @@ void VariableInit() {
   TEXT_MAX_WORD_LEN = WUP;
   TEXT_MAX_SENT_WCT = SUP;
   // use perm file instead of original
-  V_TEXT_FILE_PATH = sformat("%s.perm", V_TEXT_FILE_PATH);
+  /* V_TEXT_FILE_PATH = sformat("%s.perm", V_TEXT_FILE_PATH); */
   PrintConfigInfo();
   return;
 }

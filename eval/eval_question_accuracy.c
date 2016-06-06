@@ -135,6 +135,6 @@ int main() {
   struct Vocabulary* vcb =
       TextLoadVocab(V_VOCAB_FILE_PATH, V, V_VOCAB_HIGH_FREQ_CUTOFF);
   ModelLoad();
-  EvalQuestionAccuracy(tar, vcb, SMALLER(10000, V));
+  EvalQuestionAccuracy(scr, vcb, SMALLER(10000, V));
   return 0;
 }
