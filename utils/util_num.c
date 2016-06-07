@@ -278,13 +278,13 @@ void NumAddCVecDVec(real *a, real *b, real c, real d, int l, real *x) {
   return;
 }
 
-real NumSoftMax(real *a, int l) {
-  // return entropy
+real NumSoftMax(real *a, real d, int l) {
+  // return entropy, discounted by d; propto exp(a/d)
   int i;
   real c = MAX(a, l);
   real s = 0, e = 0, t;
   for (i = 0; i < l; i++) {
-    a[i] -= c;
+    a[i] = (a[i] - c) / d;  // discount by d
     t = NumExp(a[i]);
     e += t * a[i];
     s += t;

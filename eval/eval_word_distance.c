@@ -50,9 +50,9 @@ void EvalWordDistance(real* e, struct Vocabulary* vcb, char* sim_method) {
 }
 
 real *tar, *scr;
-char* EV_MODEL_FILE_PATH = "~/data/text8/text8.mdl";
 void ModelLoad() {
-  EV_MODEL_FILE_PATH = FilePathExpand(EV_MODEL_FILE_PATH);
+  /* char* EV_MODEL_FILE_PATH = FilePathExpand("~/data/text8/text8.mdl"); */
+  char* EV_MODEL_FILE_PATH = V_MODEL_SAVE_PATH;
   FILE* fin = fopen(EV_MODEL_FILE_PATH, "rb");
   if (!fin) {
     LOG(0, "Error!\n");

@@ -28,7 +28,7 @@ int V_ITER_NUM = 10;
 // every this number times vocabulary online updates perform one offline update
 real V_OFFLINE_INTERVAL_VOCAB_RATIO = 1;
 // Initial grad descent step size
-real V_INIT_GRAD_DESCENT_STEP_SIZE = 1e-3;
+real V_INIT_GRAD_DESCENT_STEP_SIZE = 1e-4;
 /* real V_INIT_GRAD_DESCENT_STEP_SIZE = 0; */
 // Model Shrink: l-2 regularization:
 real V_L2_REGULARIZATION_WEIGHT = 0;  // 1e-3;

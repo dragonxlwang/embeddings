@@ -44,7 +44,7 @@ real PeekEval(real *scr, real *tar, int **peek_wids, int *peek_wnum, int size) {
       NumAddCVecDVec(h0, scr + ids[md] * N, hw, -hw, N, h);
       if (ids[j] < topk) {
         for (k = 0; k < topk; k++) p[k] = NumVecDot(h, tar + k * N, N);
-        NumSoftMax(p, topk);
+        NumSoftMax(p, 1, topk);
         avgp += p[ids[j]];
         pn++;
       }

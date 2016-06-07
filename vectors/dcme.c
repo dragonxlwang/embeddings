@@ -21,7 +21,6 @@ struct Model {
   real* scr;  // source vector;
   real* tar;  // target vector;
 } * model;
-
 // each thread worker maintains a bookkeeping
 struct Bookkeeping {
   real* dd;   // list(K):vector(V) dual distribution
@@ -31,19 +30,14 @@ struct Bookkeeping {
   int* hn;    // list(K): |h_k|
   int* tw;    // list(K):list(Q) top words
 };
-
 real gd_ss;  // gradient descent step size
 int max_hn;  // when hn exceeds max_hn, performs offline update for one dist
-
 // current progress for each worker
 real* progress;
-
 // vocabulary
 struct Vocabulary* vcb;
-
 // start time
 clock_t start_clock_t;
-
 // peek set
 int** peek_wids;
 int* peek_wnum;
@@ -70,6 +64,14 @@ void ThreadPrintProgBar(int dbg_lvl, int tid, real p, struct Bookkeeping* b) {
   real pct = p * 100;
   int bar = p * bar_len;
 #ifdef DEBUG
+  real scr = NumVecNorm(model->scr, V * N);
+  real ss = NumMatMaxRowNorm(model->scr, V, N);
+  real tar = NumVecNorm(model->tar, V * N);
+  real tt = NumMatMaxRowNorm(model->tar, V, N);
+  real eem = NumVecMean(b->ent, K);
+  real ees = NumVecStd(b->ent, K);
+  real avgp = PeekEval(model->scr, model->tar, peek_wids, peek_wnum, peek_size);
+  pair* dps = sortedi(dual_update_cluster_cnt, K, 1);
   LOGC(dbg_lvl, 'y', 'k', "\n[%7.4lf%%]: ", pct);
 #else
   LOGC(dbg_lvl, 'y', 'k', "\33[2K\r[%7.4lf%%]: ", pct);
@@ -85,61 +87,28 @@ void ThreadPrintProgBar(int dbg_lvl, int tid, real p, struct Bookkeeping* b) {
   LOG(dbg_lvl, " GDSS:%.4e", gd_ss);
   free(ht);
 #ifdef DEBUG
-  real scr = NumVecNorm(model->scr, V * N);
-  real ss = NumMatMaxRowNorm(model->scr, V, N);
-  real tar = NumVecNorm(model->tar, V * N);
-  real tt = NumMatMaxRowNorm(model->tar, V, N);
-  LOG(0, " scr=%.2e/%.2ess", scr, scr / ss);
-  LOG(0, " tar=%.2e/%.2ett", tar, tar / tt);
-  LOGC(0, 'r', 'k', " ss=%.2e", ss);
-  LOGC(0, 'r', 'k', " tt=%.2e", tt);
-  real eem = NumVecMean(b->ent, K);
-  real ees = NumVecStd(b->ent, K);
-  LOGC(0, 'w', 'r', " ENT:%.2e/%.2e", eem, ees);
-  real avgp = PeekEval(model->scr, model->tar, peek_wids, peek_wnum, peek_size);
-  LOGC(0, 'r', 'c', " PEEK:%.2e", avgp);
-#endif
-#ifdef DEBUG
-  /* FILE* fout_tmp = fopen("tmp.txt", "wb"); */
-  /* pair* pairs = sorted(b->dd + zz * V, V, 1); */
-  /* for (j = 0; j < V; j++) { */
-  /*   fprintf(fout_tmp, "%d: %8d, %-20s %.6e\n", j, pairs[j].key, */
-  /*           VocabGetWord(vcb, pairs[j].key), pairs[j].val); */
-  /* } */
-  /* fclose(fout_tmp); */
-
-  /* printf("TT=%11.6e hh=%11.6e ww=%11.6e ent=%11.6e\n", */
-  /*        NumMatMaxRowNorm(m->tar, V, N), NumVecNorm(b->hh + zz * N, N), */
-  /*        NumVecNorm(b->ww + zz * N, N), b->ent[zz]); */
+  LOG(0, " SCR=%.2e=%.2e*", scr, scr / ss);  // model norm
+  LOGC(0, 'r', 'k', "%.2e", ss);
+  LOG(0, " TAR=%.2e=%.2e*", tar, tar / tt);
+  LOGC(0, 'r', 'k', "%.2e", tt);
+  LOGC(0, 'g', 'k', " ENT:%.2e\u00b1%.2e ", eem, ees);
+  LOGC(0, 'c', 'r', "PEEK:%.2e", avgp);
   printf("\n");
-  pair* dps = sortedi(dual_update_cluster_cnt, K, 1);
   int j, k;
   for (j = 0; j < K; j++) {
-    if (j % 5 == 0 && j != 0) printf("\n");
+    if (j % 10 == 0 && j != 0) printf("\n");
     k = dps[j].key;
     LOGC(0, 'y', 'k', "[%02d]:%.3lf:", k,
          (real)dual_update_cluster_cnt[k] / (dual_update_cnt + 1));
     LOGC(0, 'c', 'k', "%.2e", b->ent[k]);
   }
   free(dps);
-/* pair* ps = sorted(b->dd + zz * V, V, 1); */
-/* int printed_adw_cnt = 0; */
-/* for (j = 0; j < V; j++) { */
-/*   k = ps[j].key; */
-/*   if (b->dd[zz * V + k] > 10.0 / V) { */
-/*     // abonormal distribution weight */
-/*     LOGC(0, 'g', 'k', "[TW:%02d-W:%04d] %15s = %.6lf\n", zz, k, */
-/*          VocabGetWord(vcb, k), b->dd[zz * V + k]); */
-/*     if (printed_adw_cnt++ >= 50) break; */
-/*   } */
-/* } */
-/* free(ps); */
 #endif
   ppb_lock = 0;
   return;
 }
 
-real init_amp = 1e-3;  // to avoid numeric instability use a small value
+real init_amp = 1e-4;  // to avoid numeric instability use a small value
 struct Bookkeeping* BookkeepingCreate() {
   struct Bookkeeping* b =
       (struct Bookkeeping*)malloc(sizeof(struct Bookkeeping));
@@ -153,7 +122,6 @@ struct Bookkeeping* BookkeepingCreate() {
   NumFillValIntVec(b->hn, K, 1);
   return b;
 }
-
 void ModelInit() {
   model = (struct Model*)malloc(sizeof(struct Model));
   model->scr = NumNewHugeVec(V * N);
@@ -162,7 +130,6 @@ void ModelInit() {
   NumRandFillVec(model->tar, V * N, -init_amp, init_amp);
   return;
 }
-
 int saved_iter_num = -1;
 void ModelSave(int iter_num) {
   char* mfp;
@@ -184,7 +151,6 @@ void ModelSave(int iter_num) {
   free(mfp);
   return;
 }
-
 void BookkeepingFree(struct Bookkeeping* b) {
   free(b->dd);
   free(b->ent);
@@ -195,7 +161,6 @@ void BookkeepingFree(struct Bookkeeping* b) {
   free(b);
   return;
 }
-
 void ModelFree() {
   free(model->scr);
   free(model->tar);
@@ -205,11 +170,10 @@ void ModelFree() {
 
 void ModelGradUpdate(struct Model* m, int p, int i, real c, real* g) {
   // model minimization update: p=0: scr; p=1: tar
-  if (p == 0) {  // update scr
-    NumVecAddCVec(m->scr + i * N, g, -c * gd_ss, N);
-  } else {  // update tar
-    NumVecAddCVec(m->tar + i * N, g, -c * gd_ss, N);
-  }
+  if (p == 0)
+    NumVecAddCVec(m->scr + i * N, g, -c * gd_ss, N);  // update scr
+  else
+    NumVecAddCVec(m->tar + i * N, g, -c * gd_ss, N);  // update tar
   return;
 }
 
@@ -245,21 +209,30 @@ int DualDecode(real* h, struct Bookkeeping* b) {
 void DualUpdate(int zz, struct Bookkeeping* b, struct Model* m, heap* twh) {
   int j;
   NumMulMatVec(m->tar, b->hh + zz * N, V, N, b->dd + zz * V);   // dd
-  NumVecMulC(b->dd + zz * V, 1.0 / b->hn[zz], V);               // dd/hn
-  b->ent[zz] = NumSoftMax(b->dd + zz * V, V);                   // ent (sm)
+  b->ent[zz] = NumSoftMax(b->dd + zz * V, b->hn[zz], V);        // ent (sm)
   HeapEmpty(twh);                                               // tw reset
   for (j = 0; j < V; j++) HeapPush(twh, j, b->dd[zz * V + j]);  // tw add
   for (j = 0; j < Q; j++) b->tw[zz * Q + j] = twh->d[j].key;    // tw dump
-  qsort(b->tw + zz * Q, Q, sizeof(int), cmp_int);               // tw sort
+  qsort(b->tw + zz * Q, Q, sizeof(int), cmp_int);               // tw sort merge
   NumMulVecMat(b->dd + zz * V, m->tar, V, N, b->ww + zz * N);   // ww
   return;
 }
 
-void DualReset(int zz, struct Bookkeeping* b) {  // use previous round as prior
-  b->hn[zz] *= 0.1;                              // reset hn by decay
-  NumVecMulC(b->hh + zz * N, 0.1, N);            // reset hh by decay
-  /* b->hn[zz] = 0;                      // reset hn to half */
-  /* NumFillZeroVec(b->hh + zz * N, N);  // reset hh to half */
+void DualReset(int zz, struct Bookkeeping* b) {
+  // dual reset distribution (hh and hn) of zz
+  int dropt = 1;                         // several options are available:
+  if (dropt == 1) {                      //  1) clean reset
+    b->hn[zz] = 0;                       //
+    NumFillZeroVec(b->hh + zz * N, N);   //
+  } else if (dropt == 2) {               //  2) half reset
+    b->hn[zz] *= 0.5;                    //
+    NumVecMulC(b->hh + zz * N, 0.5, N);  //
+  } else if (dropt == 3) {               //  3) decay/overshoot reset
+    real v = 0.1;                        //
+    b->hn[zz] *= v;                      //
+    NumVecMulC(b->hh + zz * N, v, N);    //
+  }                                      //  4) no reset
+  return;
 }
 
 int Update(int* ids, int l, struct Bookkeeping* b, struct Model* m, heap* twh) {
@@ -268,9 +241,7 @@ int Update(int* ids, int l, struct Bookkeeping* b, struct Model* m, heap* twh) {
   int i, j, k, lt, rt, md;
   real h0[NUP], h[NUP], hw[SUP], wd[NUP * SUP], w0[NUP], w[NUP];
   int zz, h0n = 0;
-  int neg_id;
-  /* int window = NumRand() * C + 1; */
-  int window = C;
+  int window = C;  // int window = NumRand() * C + 1;
   NumFillZeroVec(h0, N);
   NumFillZeroVec(w0, N);
   for (i = 0; i < SMALLER(l, window); i++) {
@@ -294,12 +265,11 @@ int Update(int* ids, int l, struct Bookkeeping* b, struct Model* m, heap* twh) {
     zz = DualDecode(h, b);                                            // dcd z
     NumVecAddCVec(b->hh + zz * N, h, 1.0, N);                         // b->hh
     b->hn[zz]++;                                                      // b->hn
-    NumAddCVecDVec(m->tar + ids[i] * N, b->ww + zz * N, 1, -1, N,
-                   wd + i * N);            // wd[i] <- w - ww
-    ModelGradUpdate(m, 1, ids[i], -1, h);  // up m->tar (pos)
+    NumAddCVecDVec(m->tar + ids[i] * N, b->ww + zz * N, 1, -1, N, wd + i * N);
+    ModelGradUpdate(m, 1, ids[i], -1, h);  // up m->tar (pos), wd[i] <- w - ww
     for (j = 0; j < Q; j++) {              // up m->tar (neg, top words)
-      neg_id = b->tw[zz * Q + j];
-      ModelGradUpdate(m, 1, neg_id, b->dd[zz * V + neg_id], h);
+      k = b->tw[zz * Q + j];
+      ModelGradUpdate(m, 1, k, b->dd[zz * V + k], h);
     }
     lt = i - 2 * window - 1;
     rt = i;
