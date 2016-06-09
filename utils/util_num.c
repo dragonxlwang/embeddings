@@ -173,6 +173,18 @@ int *NumCloneIntVec(int *vec, int elem_num) {
   return ptr;
 }
 
+void NumCopyVec(real *d, real *s, int l) {
+  int i;
+  for (i = 0; i < l; i++) d[i] = s[i];
+  return;
+}
+
+void NumCopyIntVec(int *d, real *s, int l) {
+  int i;
+  for (i = 0; i < l; i++) d[i] = s[i];
+  return;
+}
+
 void NumReadVec(real *ptr, long long int elem_num, FILE *fin) {
   long long int actual_read_size = fread(ptr, sizeof(real), elem_num, fin);
   if (actual_read_size != elem_num) {
@@ -295,15 +307,15 @@ real NumSoftMax(real *a, real d, int l) {
   return (e > 0) ? e : 0;
 }
 
-void NumVecProjUnitSphere(real *a, int l) {
+void NumVecProjUnitSphere(real *a, real s, int l) {
   // project to unit sphere
-  NumVecMulC(a, 1.0 / NumVecNorm(a, l), l);
+  NumVecMulC(a, s / NumVecNorm(a, l), l);
   return;
 }
 
-void NumVecProjUnitBall(real *a, int l) {
+void NumVecProjUnitBall(real *a, real s, int l) {
   // project to unit ball
-  real c = 100.0 / NumVecNorm(a, l);
+  real c = s / NumVecNorm(a, l);
   if (c < 1) NumVecMulC(a, c, l);
   return;
 }
