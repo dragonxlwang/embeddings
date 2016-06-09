@@ -44,10 +44,14 @@
 
 int log_debug_mode = 2;
 
+char *log_affix_str = NULL;
 // print only if log_dbg_level is small enough -- 0 being always printed
 #define LOG(log_dbg_level, ...)            \
   ({                                       \
     if (log_debug_mode >= log_dbg_level) { \
+      if (log_affix_str) {                 \
+        printf("%s: ", log_affix_str);     \
+      }                                    \
       printf(__VA_ARGS__);                 \
       fflush(stdout);                      \
     }                                      \
@@ -55,6 +59,9 @@ int log_debug_mode = 2;
 #define LOGC(log_dbg_level, ...)           \
   ({                                       \
     if (log_debug_mode >= log_dbg_level) { \
+      if (log_affix_str) {                 \
+        printf("%s: ", log_affix_str);     \
+      }                                    \
       printfc(__VA_ARGS__);                \
       fflush(stdout);                      \
     }                                      \

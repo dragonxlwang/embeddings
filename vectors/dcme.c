@@ -179,7 +179,7 @@ void ModelGradUpdate(struct Model* m, int p, int i, real c, real* g) {
 
 void ModelShrink(struct Model* m) {
   int i;
-  if (V_L2_REGULARIZATION_WEIGHT) {
+  if (V_L2_REGULARIZATION_WEIGHT != 0) {
     NumVecMulC(model->scr, 1 - V_L2_REGULARIZATION_WEIGHT, V * N);
     NumVecMulC(model->tar, 1 - V_L2_REGULARIZATION_WEIGHT, V * N);
   } else if (V_MODEL_PROJ_UNIT_BALL) {
@@ -212,7 +212,7 @@ void DualUpdate(int zz, struct Bookkeeping* b, struct Model* m, heap* twh) {
   b->ent[zz] = NumSoftMax(b->dd + zz * V, b->hn[zz], V);        // ent (sm)
   HeapEmpty(twh);                                               // tw reset
   for (j = 0; j < V; j++) HeapPush(twh, j, b->dd[zz * V + j]);  // tw add
-  for (j = 0; j < Q; j++) b->tw[zz * Q + j] = twh->d[j].key;    // tw dump
+  for (j = 0; j < Q; j++) b->tw[zz * Q + j] = twh->d[j].key;    // tw load
   qsort(b->tw + zz * Q, Q, sizeof(int), cmp_int);               // tw sort merge
   NumMulVecMat(b->dd + zz * V, m->tar, V, N, b->ww + zz * N);   // ww
   return;
@@ -289,11 +289,12 @@ int Update(int* ids, int l, struct Bookkeeping* b, struct Model* m, heap* twh) {
     }
     if (b->hn[zz] >= max_hn) {                // update offline
       offline_performed = 1;                  //
-      for (j = 0, k = 0; j < V; j++)          // up m->tar (neg, other words)
+      for (j = 0, k = 0; j < V; j++) {        // up m->tar (neg, other words)
         if (k < Q && j == b->tw[zz * Q + k])  // join two sorted list
           k++;
         else
           ModelGradUpdate(m, 1, j, b->dd[zz * V + j], b->hh + zz * N);
+      }
       ModelShrink(m);             // optional model shrink
       DualUpdate(zz, b, m, twh);  // dual update based on hh and hn
       DualReset(zz, b);           // reset hh and hn
@@ -354,7 +355,7 @@ void* ThreadWork(void* arg) {
 void ScheduleWork() {
   long long int tid;
   start_clock_t = clock();
-  progress = (real*)malloc(V_THREAD_NUM * sizeof(real));
+  progress = (real*)malloc(V_THREAD_NUM * sizeof(real));  // >>
   NumFillZeroVec(progress, V_THREAD_NUM);
   VariableInit();  // include initialization
   NumInit();
@@ -364,7 +365,7 @@ void ScheduleWork() {
     vcb = TextBuildVocab(V_TEXT_FILE_PATH, 1, -1);
     TextSaveVocab(V_VOCAB_FILE_PATH, vcb);
   }
-  vcb = TextLoadVocab(V_VOCAB_FILE_PATH, V, V_VOCAB_HIGH_FREQ_CUTOFF);
+  vcb = TextLoadVocab(V_VOCAB_FILE_PATH, V, V_VOCAB_HIGH_FREQ_CUTOFF);  // >>
   V = vcb->size;
   LOG(1, "Actual V  : %d\n", V);
   // build peek set if necessary, and load
@@ -373,25 +374,24 @@ void ScheduleWork() {
     peek_size = PeekBuildSentSet(V_TEXT_FILE_PATH, V_PEEK_SAMPLE_RATE, vcb,
                                  &peek_wids, &peek_wnum);
     PeekSaveSentSet(V_PEEK_FILE_PATH, peek_wids, peek_wnum, peek_size);
-    // build peek set for w2v
     PeekSaveTextSentSet(sformat("%s.txt", V_PEEK_FILE_PATH), peek_wids,
-                        peek_wnum, peek_size, vcb);
+                        peek_wnum, peek_size, vcb);  // build peek set for w2v
   }
   peek_size = PeekLoadSentSet(V_PEEK_FILE_PATH, &peek_wids, &peek_wnum);
   LOG(1, "Peek size : %d\n", peek_size);
   // initialization
-  ModelInit();
+  ModelInit();  // >>
   max_hn = V * V_OFFLINE_INTERVAL_VOCAB_RATIO;
   // schedule thread jobs
-  pthread_t* pt = (pthread_t*)malloc(V_THREAD_NUM * sizeof(pthread_t));
+  pthread_t* pt = (pthread_t*)malloc(V_THREAD_NUM * sizeof(pthread_t));  // >>
   for (tid = 0; tid < V_THREAD_NUM; tid++)
     pthread_create(&pt[tid], NULL, ThreadWork, (void*)tid);
   for (tid = 0; tid < V_THREAD_NUM; tid++) pthread_join(pt[tid], NULL);
-  ModelSave(-1);  // save model
-  ModelFree();    // free
-  VocabDestroy(vcb);
-  free(progress);
-  free(pt);
+  ModelSave(-1);      // save model
+  free(pt);           // <<
+  ModelFree();        // <<
+  VocabDestroy(vcb);  // <<
+  free(progress);     // <<
   LOG(1, "\nTraining finished\n");
   return;
 }

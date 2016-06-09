@@ -85,13 +85,18 @@ void EvalQuestionAccuracy(real* e, struct Vocabulary* vcb, int V) {
     }
     for (c = 0; c < h->size; c++)
       if (h->d[c].key == b4) break;
-    if (c != h->size) {
+    if (c != h->size) {  // correct
       CCN++;
       CACN++;
       if (QID <= 5)
         SEAC++;
       else
         SYAC++;
+    } else {  // wrong
+      /* printf("%s:%s vs %s:%s ", st1, st2, st3, st4); */
+      /* for (c = 0; c < h->size; c++) */
+      /*   printf("[%d]:%s ", c, VocabGetWord(vcb, h->d[c].key)); */
+      /* printf("\n"); */
     }
     if (QID <= 5)
       SECN++;

@@ -17,25 +17,25 @@
 #define WUP 100      // upper bound for character number in a word
 #define SUP 200      // upper bound for word number in a sentence
 
-char *V_TEXT_FILE_PATH = "~/data/gigaword/giga_nyt.txt";
-/* char *V_TEXT_FILE_PATH = "~/data/text8/text8"; */
+char *V_TEXT_FILE_PATH = "~/data/gigaword/giga_nyt.txt";  // "text8/text8"
+/* char *V_MODEL_DECOR_FILE_PATH = "dr_reset_0_tw_gd_1e-3_uniball"; */
+/* char *V_MODEL_DECOR_FILE_PATH = "dr_reset_0_tw_0"; */
+char *V_MODEL_DECOR_FILE_PATH = "dr_reset_0_tw_gd_1e-3_uniball";
 char *V_VOCAB_FILE_PATH = NULL;  // don't set it if can be inferred from above
 char *V_MODEL_SAVE_PATH = NULL;
 char *V_PEEK_FILE_PATH = NULL;
-/* int V_THREAD_NUM = 1; */
 int V_THREAD_NUM = 20;
 int V_ITER_NUM = 10;
 // every this number times vocabulary online updates perform one offline update
-real V_OFFLINE_INTERVAL_VOCAB_RATIO = 1;
+real V_OFFLINE_INTERVAL_VOCAB_RATIO = 100;
 // Initial grad descent step size
-real V_INIT_GRAD_DESCENT_STEP_SIZE = 1e-4;
-/* real V_INIT_GRAD_DESCENT_STEP_SIZE = 0; */
+real V_INIT_GRAD_DESCENT_STEP_SIZE = 1e-3;
 // Model Shrink: l-2 regularization:
 real V_L2_REGULARIZATION_WEIGHT = 0;  // 1e-3;
 // Peek sampling rate
 real V_PEEK_SAMPLE_RATE = 1e-5;
 // Model Shrink: if proj model to unit ball
-int V_MODEL_PROJ_UNIT_BALL = 0;
+int V_MODEL_PROJ_UNIT_BALL = 1;
 // Vocab loading option: cut-off high frequent (stop) words
 int V_VOCAB_HIGH_FREQ_CUTOFF = 80;
 // if cache model per iteration
@@ -44,12 +44,11 @@ int V_CACHE_INTERMEDIATE_MODEL = 0;
 int V_VOCAB_OVERWRITE = 0;
 // if overwrite peek file
 int V_PEEK_OVERWRITE = 0;
-int N = 100;  // embedding dimension
-int K = 20;   // number of dual cluster
-/* int V = 1000;  // vocabulary size cap, set to -1 if no limit */
+int N = 100;      // embedding dimension
+int K = 100;      // number of dual cluster
 int V = 1000000;  // vocabulary size cap, set to -1 if no limit
 int C = 5;        // context length
-int Q = 10;       // Number of negative words updated online
+int Q = 0;        // Number of negative words updated online
 
 void PrintConfigInfo() {
   LOG(1, "Input File                                        : %s\n",
@@ -124,9 +123,13 @@ void VariableInit() {
     V_VOCAB_FILE_PATH = FilePathSubExtension(V_TEXT_FILE_PATH, "vcb");
   else
     V_VOCAB_FILE_PATH = FilePathExpand(V_VOCAB_FILE_PATH);
-  if (!V_MODEL_SAVE_PATH)
-    V_MODEL_SAVE_PATH = FilePathSubExtension(V_TEXT_FILE_PATH, "mdl");
-  else
+  if (!V_MODEL_SAVE_PATH) {
+    if (V_MODEL_DECOR_FILE_PATH) {
+      V_MODEL_SAVE_PATH = FilePathSubExtension(
+          V_TEXT_FILE_PATH, sformat("%s.mdl", V_MODEL_DECOR_FILE_PATH));
+    } else
+      V_MODEL_SAVE_PATH = FilePathSubExtension(V_TEXT_FILE_PATH, "mdl");
+  } else
     V_MODEL_SAVE_PATH = FilePathExpand(V_MODEL_SAVE_PATH);
   if (!V_PEEK_FILE_PATH)
     V_PEEK_FILE_PATH = FilePathSubExtension(V_TEXT_FILE_PATH, "pek");
