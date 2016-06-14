@@ -4,7 +4,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "../utils/util_file.c"
 #include "../utils/util_misc.c"
 #include "../utils/util_num.c"
 #include "../utils/util_text.c"
@@ -18,9 +17,7 @@
 #define SUP 200      // upper bound for word number in a sentence
 
 char *V_TEXT_FILE_PATH = "~/data/gigaword/giga_nyt.txt";  // "text8/text8"
-/* char *V_MODEL_DECOR_FILE_PATH = "dr_reset_0_tw_gd_1e-3_uniball"; */
-/* char *V_MODEL_DECOR_FILE_PATH = "dr_reset_0_tw_0"; */
-char *V_MODEL_DECOR_FILE_PATH = "dr_reset_0_tw_gd_1e-3_uniball";
+char *V_MODEL_DECOR_FILE_PATH = "";
 char *V_VOCAB_FILE_PATH = NULL;  // don't set it if can be inferred from above
 char *V_MODEL_SAVE_PATH = NULL;
 char *V_PEEK_FILE_PATH = NULL;
@@ -29,13 +26,13 @@ int V_ITER_NUM = 10;
 // every this number times vocabulary online updates perform one offline update
 real V_OFFLINE_INTERVAL_VOCAB_RATIO = 1;
 // Initial grad descent step size
-real V_INIT_GRAD_DESCENT_STEP_SIZE = 1e-3;
+real V_INIT_GRAD_DESCENT_STEP_SIZE = 1e-4;
 // Model Shrink: l-2 regularization:
 real V_L2_REGULARIZATION_WEIGHT = 0;  // 1e-3;
 // Peek sampling rate
 real V_PEEK_SAMPLE_RATE = 1e-5;
 // Model Shrink: if proj model to unit ball
-int V_MODEL_PROJ_UNIT_BALL = 1;
+int V_MODEL_PROJ_UNIT_BALL = 0;
 // Vocab loading option: cut-off high frequent (stop) words
 int V_VOCAB_HIGH_FREQ_CUTOFF = 80;
 // if cache model per iteration
@@ -45,12 +42,104 @@ int V_VOCAB_OVERWRITE = 0;
 // if overwrite peek file
 int V_PEEK_OVERWRITE = 0;
 // if using micro maximal entropy for top words plus target words
-int V_MICRO_ME = 1;
+int V_MICRO_ME = 0;
+// if also use micro-me adjusted distribution for updateing scr (w - ww)
+int V_MICRO_ME_SCR_UPDATE = 0;
 int N = 100;      // embedding dimension
-int K = 100;      // number of dual cluster
+int K = 20;       // number of dual cluster
 int V = 1000000;  // vocabulary size cap, set to -1 if no limit
 int C = 5;        // context length
-int Q = 0;        // Number of negative words updated online
+int Q = 10;       // Number of negative words updated online
+
+/* char *V_MODEL_DECOR_FILE_PATH = "dr_reset_0_tw_gd_1e-3_uniball"; */
+/* char *V_MODEL_DECOR_FILE_PATH = "dr_reset_0_tw_0"; */
+/* char *V_MODEL_DECOR_FILE_PATH = "micro-me-no-scr_uniball_gd-1e-3"; */
+/* char *V_MODEL_DECOR_FILE_PATH = "micro-me-no-scr_uniball"; */
+/* char *V_MODEL_DECOR_FILE_PATH = "uniball_gd-1e-3"; */
+
+void VariableOverwrite() {
+  // jun 13
+  if (0) {  // nan
+    V_MODEL_DECOR_FILE_PATH = "gd-1e-3";
+    V_INIT_GRAD_DESCENT_STEP_SIZE = 1e-3;
+  }
+  if (0) {  // 8.09%  Q: 13.44%
+    V_MODEL_DECOR_FILE_PATH = "gd-1e-4";
+    V_INIT_GRAD_DESCENT_STEP_SIZE = 1e-4;
+  }
+  if (0) {  // 4.47%  Q: 6.89%
+    V_MODEL_DECOR_FILE_PATH = "gd-1e-3_uniball";
+    V_INIT_GRAD_DESCENT_STEP_SIZE = 1e-3;
+    V_MODEL_PROJ_UNIT_BALL = 1;
+  }
+  if (0) {  // 8.36%  Q: 16.30%
+    V_MODEL_DECOR_FILE_PATH = "gd-1e-4_uniball";
+    V_INIT_GRAD_DESCENT_STEP_SIZE = 1e-4;
+    V_MODEL_PROJ_UNIT_BALL = 1;
+  }
+  if (0) {  // 3.63%  Q: 6.31%
+    V_MODEL_DECOR_FILE_PATH = "gd-1e-3_uniball_micro-me";
+    V_INIT_GRAD_DESCENT_STEP_SIZE = 1e-3;
+    V_MODEL_PROJ_UNIT_BALL = 1;
+    V_MICRO_ME = 1;
+  }
+  if (0) {  // 8.13%  Q: 17.73%
+    V_MODEL_DECOR_FILE_PATH = "gd-1e-4_uniball_micro-me";
+    V_INIT_GRAD_DESCENT_STEP_SIZE = 1e-4;
+    V_MODEL_PROJ_UNIT_BALL = 1;
+    V_MICRO_ME = 1;
+  }
+  if (0) {  // 9.23%  Q: 5.95%
+    V_MODEL_DECOR_FILE_PATH = "gd-1e-3_uniball_micro-me-scr";
+    V_INIT_GRAD_DESCENT_STEP_SIZE = 1e-3;
+    V_MODEL_PROJ_UNIT_BALL = 1;
+    V_MICRO_ME = 1;
+    V_MICRO_ME_SCR_UPDATE = 1;
+  }
+  if (1) {  // 6.18%  Q: 18.66%
+    V_MODEL_DECOR_FILE_PATH = "gd-1e-4_uniball_micro-me-scr";
+    V_INIT_GRAD_DESCENT_STEP_SIZE = 1e-4;
+    V_MODEL_PROJ_UNIT_BALL = 1;
+    V_MICRO_ME = 1;
+    V_MICRO_ME_SCR_UPDATE = 1;
+  }
+  // jun 14
+  if (0) {  //
+    V_MODEL_DECOR_FILE_PATH = "gd-1e-4_no-cutoff";
+    V_INIT_GRAD_DESCENT_STEP_SIZE = 1e-4;
+    V_VOCAB_HIGH_FREQ_CUTOFF = 0;
+  }
+  if (0) {  //
+    V_MODEL_DECOR_FILE_PATH = "gd-1e-4_uniball_no-cutoff";
+    V_INIT_GRAD_DESCENT_STEP_SIZE = 1e-4;
+    V_MODEL_PROJ_UNIT_BALL = 1;
+    V_VOCAB_HIGH_FREQ_CUTOFF = 0;
+  }
+  if (0) {  //
+    V_MODEL_DECOR_FILE_PATH = "gd-1e-3_uniball_micro-me-scr_no-cutoff";
+    V_INIT_GRAD_DESCENT_STEP_SIZE = 1e-3;
+    V_MODEL_PROJ_UNIT_BALL = 1;
+    V_MICRO_ME = 1;
+    V_MICRO_ME_SCR_UPDATE = 1;
+    V_VOCAB_HIGH_FREQ_CUTOFF = 0;
+  }
+  if (0) {  //
+    V_MODEL_DECOR_FILE_PATH = "gd-1e-4_uniball_micro-me_no-cutoff";
+    V_INIT_GRAD_DESCENT_STEP_SIZE = 1e-4;
+    V_MODEL_PROJ_UNIT_BALL = 1;
+    V_MICRO_ME = 1;
+    V_VOCAB_HIGH_FREQ_CUTOFF = 0;
+  }
+  if (1) {  //
+    V_MODEL_DECOR_FILE_PATH = "gd-1e-4_uniball_micro-me-scr_no-cutoff";
+    V_INIT_GRAD_DESCENT_STEP_SIZE = 1e-4;
+    V_MODEL_PROJ_UNIT_BALL = 1;
+    V_MICRO_ME = 1;
+    V_MICRO_ME_SCR_UPDATE = 1;
+    V_VOCAB_HIGH_FREQ_CUTOFF = 0;
+  }
+  return;
+}
 
 void PrintConfigInfo() {
   LOG(1, "Input File                                        : %s\n",
@@ -85,6 +174,8 @@ void PrintConfigInfo() {
       V_PEEK_OVERWRITE);
   LOG(1, "Micro ME for top words                            : %d\n",
       V_MICRO_ME);
+  LOG(1, "Micro ME adjusted distribution for updateing scr  : %d\n",
+      V_MICRO_ME_SCR_UPDATE);
   LOG(1, "[N] -- word embedding dim                 : %d\n", N);
   LOG(1, "[K] -- dual cluster number                : %d\n", K);
   LOG(1, "[V] -- vocabulary size cap                : %d\n", V);
@@ -121,6 +212,7 @@ void PrintConfigInfo() {
 
 // always call this function before work
 void VariableInit() {
+  VariableOverwrite();
   // expand file paths
   V_TEXT_FILE_PATH = FilePathExpand(V_TEXT_FILE_PATH);
   if (!V_VOCAB_FILE_PATH)

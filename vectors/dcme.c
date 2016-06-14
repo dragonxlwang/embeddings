@@ -74,10 +74,12 @@ void ThreadPrintProgBar(int dbg_lvl, int tid, real p, struct Bookkeeping* b) {
   real ees = NumVecStd(b->ent, K);
   real avgp = PeekEval(model->scr, model->tar, peek_wids, peek_wnum, peek_size);
   pair* dps = sortedi(dual_update_cluster_cnt, K, 1);
-  LOGC(dbg_lvl, 'y', 'k', "\n[%7.4lf%%]: ", pct);
+  LOG(dbg_lvl, "\n");
 #else
-  LOGC(dbg_lvl, 'y', 'k', "\33[2K\r[%7.4lf%%]: ", pct);
+  LOGCLN(dbg_lvl);
 #endif
+  LOG(dbg_lvl, "[%s]: ", V_MODEL_DECOR_FILE_PATH);
+  LOGC(dbg_lvl, 'y', 'k', "[%7.4lf%%]: ", pct);
   for (i = 0; i < bar; i++) LOGC(dbg_lvl, 'r', 'k', "+");
   LOGC(dbg_lvl, 'r', 'k', "~");
   for (i = bar + 1; i < bar_len; i++) LOGC(dbg_lvl, 'c', 'k', "=");
@@ -176,23 +178,20 @@ void ModelFree() {
 
 void ModelGradUpdate(struct Model* m, int p, int i, real c, real* g) {
   // model minimization update: p=0: scr; p=1: tar
-  if (p == 0)
+  if (p == 0) {
     NumVecAddCVec(m->scr + i * N, g, -c * gd_ss, N);  // update scr
-  else
+    if (V_MODEL_PROJ_UNIT_BALL) NumVecProjUnitBall(m->scr + i * N, 1e2, N);
+  } else {
     NumVecAddCVec(m->tar + i * N, g, -c * gd_ss, N);  // update tar
+    if (V_MODEL_PROJ_UNIT_BALL) NumVecProjUnitBall(m->tar + i * N, 1e2, N);
+  }
   return;
 }
 
 void ModelShrink(struct Model* m) {
-  int i;
   if (V_L2_REGULARIZATION_WEIGHT != 0) {  // l2 regularization perform not well
     NumVecMulC(model->scr, 1 - V_L2_REGULARIZATION_WEIGHT, V * N);
     NumVecMulC(model->tar, 1 - V_L2_REGULARIZATION_WEIGHT, V * N);
-  } else if (V_MODEL_PROJ_UNIT_BALL) {  // in w2v, max word norm is usually
-    for (i = 0; i < V; i++) {           // bounded by 1e2
-      NumVecProjUnitBall(m->scr + i * N, 1e2, N);
-      NumVecProjUnitBall(m->tar + i * N, 1e2, N);
-    }
   }
   return;
 }
@@ -224,19 +223,17 @@ void DualUpdate(int zz, struct Bookkeeping* b, struct Model* m, heap* twh) {
     NumMulVecMat(b->dd + zz * V, m->tar, V, N, b->ww + zz * N);  // ww
   } else {
     NumFillZeroVec(b->wwow + zz * N, N);
+    NumFillZeroVec(b->ww + zz * N, N);
     b->twps[zz] = 0;
-    for (j = 0, k = 0; j < V; j++) {  // wwow: two way merge for other words
-      if (j == b->tw[zz * Q + k])
+    for (j = 0, k = 0; j < V; j++) {  // ww, wwow: two way merge of tw and ow
+      if (j == b->tw[zz * Q + k]) {   // topic words
+        NumVecAddCVec(b->ww + zz * N, m->tar + j * N, b->dd[zz * V + j], N);
+        b->twps[zz] += b->dd[zz * N + j];
         k++;
-      else
+      } else
         NumVecAddCVec(b->wwow + zz * N, m->tar + j * N, b->dd[zz * V + j], N);
     }
-    NumCopyVec(b->ww + zz * N, b->wwow + zz * N, N);  // ww: adding tw
-    for (k = 0; k < Q; k++) {
-      j = b->tw[zz * Q + k];
-      NumVecAddCVec(b->ww + zz * N, m->tar + j * N, b->dd[zz * V + j], N);
-      b->twps[zz] += b->dd[zz * N + j];
-    }
+    NumVecAddCVec(b->ww + zz * N, b->wwow + zz * N, 1, N);  // ww: adding ow
   }
   return;
 }
@@ -262,17 +259,16 @@ int Update(int* ids, int l, struct Bookkeeping* b, struct Model* m, heap* twh) {
   // dual/primal update for one sentence (ids, l)
   int offline_performed = 0;
   int i, j, k, lt, rt, md;
-  real h0[NUP], h[NUP], hw[SUP], wd[NUP * SUP], w0[NUP], w[NUP];
+  real h0[NUP], h[NUP], hw[SUP], wd[NUP * SUP], w0[NUP], w[NUP], twp[QUP];
   int zz, h0n = 0;
-  int window = C;                    // int window = NumRand() * C + 1;
-  real* twp = NumNewHugeVec(Q + 1);  // probability for tw
-  int twidx, twlen;                  // target ward idx, micro me dim
-  real twps;                         // sum of tw words
+  int window = C;    // int window = NumRand() * C + 1;
+  int twidx, twlen;  // target ward idx, micro me dim
+  real twps;         // sum of tw words
   NumFillZeroVec(h0, N);
   NumFillZeroVec(w0, N);
   for (i = 0; i < SMALLER(l, window); i++) {
-    NumVecAddCVec(h0, m->scr + ids[i] * N, 1, N);
-    h0n++;
+    NumVecAddCVec(h0, m->scr + ids[i] * N, 1, N);  // h0++
+    h0n++;                                         // h0n++
   }
   for (i = 0; i < l; i++) {
     lt = i - window - 1;
@@ -291,7 +287,6 @@ int Update(int* ids, int l, struct Bookkeeping* b, struct Model* m, heap* twh) {
     zz = DualDecode(h, b);                                            // dcd z
     NumVecAddCVec(b->hh + zz * N, h, 1.0, N);                         // b->hh
     b->hn[zz]++;                                                      // b->hn
-
     if (!V_MICRO_ME) {
       NumAddCVecDVec(m->tar + ids[i] * N, b->ww + zz * N, 1, -1, N, wd + i * N);
       ModelGradUpdate(m, 1, ids[i], -1, h);  // up m->tar (pos), wd[i] <- w - ww
@@ -317,14 +312,19 @@ int Update(int* ids, int l, struct Bookkeeping* b, struct Model* m, heap* twh) {
       NumSoftMax(twp, 1.0, twlen);
       NumVecMulC(twp, twps, twlen);
       if (twidx == Q) twp[twidx] -= b->dd[zz * V + ids[i]];  // split
-      NumAddCVecDVec(m->tar + ids[i] * N, b->wwow + zz * N, 1, -1, N,
-                     wd + i * N);  // wd[i] <- w - wwow - wwtw
-      for (k = 0; k < twlen; k++) {
-        if (k == Q)
-          j = ids[i];
-        else
-          j = b->tw[zz * Q + k];
-        NumVecAddCVec(wd + i * N, m->tar + j * N, -twp[k], N);
+      if (V_MICRO_ME_SCR_UPDATE) {
+        NumAddCVecDVec(m->tar + ids[i] * N, b->wwow + zz * N, 1, -1, N,
+                       wd + i * N);  // wd[i] <- w - wwow - wwtw
+        for (k = 0; k < twlen; k++) {
+          if (k == Q)
+            j = ids[i];
+          else
+            j = b->tw[zz * Q + k];
+          NumVecAddCVec(wd + i * N, m->tar + j * N, -twp[k], N);
+        }
+      } else {
+        NumAddCVecDVec(m->tar + ids[i] * N, b->ww + zz * N, 1, -1, N,
+                       wd + i * N);
       }
       ModelGradUpdate(m, 1, ids[i], -1, h);  // up m->tar (pos)
       for (k = 0; k < twlen; k++) {          // up m->tar (neg, top words)
@@ -332,7 +332,7 @@ int Update(int* ids, int l, struct Bookkeeping* b, struct Model* m, heap* twh) {
           j = ids[i];
         else
           j = b->tw[zz * Q + k];
-        ModelGradUpdate(m, 1, j, twp[k], h);  // using micro me probability
+        ModelGradUpdate(m, 1, j, twp[k], h);
       }
     }
     lt = i - 2 * window - 1;
@@ -368,7 +368,6 @@ int Update(int* ids, int l, struct Bookkeeping* b, struct Model* m, heap* twh) {
 #endif
     }
   }
-  free(twp);
   return offline_performed;
 }
 

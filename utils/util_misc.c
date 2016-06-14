@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <wordexp.h>
 
 // util_misc.c shall not include other util_XXXX files but can be included
 // sid_module_name prefix indicate functions/variables shall not be accessed
@@ -44,14 +45,10 @@
 
 int log_debug_mode = 2;
 
-char *log_affix_str = NULL;
 // print only if log_dbg_level is small enough -- 0 being always printed
 #define LOG(log_dbg_level, ...)            \
   ({                                       \
     if (log_debug_mode >= log_dbg_level) { \
-      if (log_affix_str) {                 \
-        printf("%s: ", log_affix_str);     \
-      }                                    \
       printf(__VA_ARGS__);                 \
       fflush(stdout);                      \
     }                                      \
@@ -59,10 +56,14 @@ char *log_affix_str = NULL;
 #define LOGC(log_dbg_level, ...)           \
   ({                                       \
     if (log_debug_mode >= log_dbg_level) { \
-      if (log_affix_str) {                 \
-        printf("%s: ", log_affix_str);     \
-      }                                    \
       printfc(__VA_ARGS__);                \
+      fflush(stdout);                      \
+    }                                      \
+  })
+#define LOGCLN(log_dbg_level)              \
+  ({                                       \
+    if (log_debug_mode >= log_dbg_level) { \
+      printf("\33[2K\r");                  \
       fflush(stdout);                      \
     }                                      \
   })
@@ -79,6 +80,21 @@ char *log_affix_str = NULL;
   })
 #define LOWER(c) (((c) >= 'A' && (c) <= 'Z') ? (c) - 'A' + 'a' : (c))
 #define UPPER(c) (((c) >= 'a' && (c) <= 'z') ? (c) - 'a' + 'A' : (c))
+
+void slower(char *s) {
+  int i;
+  int l = strlen(s);
+  for (i = 0; i < l; i++) s[i] = LOWER(s[i]);
+  return;
+}
+
+void suppwer(char *s) {
+  int i;
+  int l = strlen(s);
+  for (i = 0; i < l; i++) s[i] = UPPER(s[i]);
+  return;
+}
+
 char *sconcat(char *sa, char *sb, int la, int lb) {
   // if la = -1 (or lb), use whole string for concatenating
   int i;
@@ -225,6 +241,27 @@ int fexists(const char *filename) {
   FILE *file = fopen(filename, "r");
   if (file) fclose(file);
   return (file != 0);
+}
+
+char *FilePathExpand(char *fp) {
+  wordexp_t ep;
+  wordexp(fp, &ep, 0);
+  char *nfp = malloc(strlen(ep.we_wordv[0]) + 1);
+  strcpy(nfp, ep.we_wordv[0]);
+  wordfree(&ep);
+  return nfp;
+}
+
+char *FilePathSubExtension(char *fp, char *ext) {
+  int i = strlen(fp) - 1;
+  while (i >= 0 && fp[i] != '.') i--;
+  if (i < 0) i = strlen(fp);
+  char *nfp = (char *)malloc(i + 1 + strlen(ext) + 1);
+  memcpy(nfp, fp, i);
+  memcpy(nfp + i, ".", 1);
+  memcpy(nfp + i + 1, ext, strlen(ext));
+  nfp[i + 1 + strlen(ext)] = '\0';
+  return nfp;
 }
 
 /***

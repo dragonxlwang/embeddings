@@ -1,11 +1,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "../utils/util_file.c"
 #include "../utils/util_misc.c"
 #include "../utils/util_num.c"
 #include "../utils/util_text.c"
 #include "../vectors/variables.c"
+#include "eval_load_model.c"
 
 void EvalWordDistance(real* e, struct Vocabulary* vcb, char* sim_method) {
   int i;
@@ -49,34 +49,11 @@ void EvalWordDistance(real* e, struct Vocabulary* vcb, char* sim_method) {
   return;
 }
 
-real *tar, *scr;
-void ModelLoad() {
-  /* char* EV_MODEL_FILE_PATH = FilePathExpand("~/data/text8/text8.mdl"); */
-  char* EV_MODEL_FILE_PATH = V_MODEL_SAVE_PATH;
-  FILE* fin = fopen(EV_MODEL_FILE_PATH, "rb");
-  if (!fin) {
-    LOG(0, "Error!\n");
-    exit(1);
-  }
-  scr = NumNewHugeVec(N * V);
-  if (fread(scr, sizeof(real), N * V, fin) != N * V) {
-    LOG(0, "Error!\n");
-    exit(1);
-  }
-  tar = NumNewHugeVec(N * V);
-  if (fread(tar, sizeof(real), N * V, fin) != N * V) {
-    LOG(0, "Error!\n");
-    exit(1);
-  }
-  return;
-}
-
 int main() {
   VariableInit();
   NumInit();
-  struct Vocabulary* vcb =
-      TextLoadVocab(V_VOCAB_FILE_PATH, V, V_VOCAB_HIGH_FREQ_CUTOFF);
   ModelLoad();
+  /* W2vModelLoad(); */
   EvalWordDistance(scr, vcb, "cosine");
   /* EvalWordDistance(tar, vcb, "l2-dist"); */
   return 0;

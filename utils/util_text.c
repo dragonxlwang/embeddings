@@ -80,7 +80,7 @@ void VocabDestroy(struct Vocabulary* vcb) {
   return;
 }
 
-void VocabAdd(struct Vocabulary* vcb, char* str, int cnt) {
+int VocabAdd(struct Vocabulary* vcb, char* str, int cnt) {
   int h = GetStrHash(str);
   int id = vcb->hash2head[h];
   while (id != -1 && strcmp(vcb->id2wd[id], str) != 0) id = vcb->id2next[id];
@@ -98,7 +98,7 @@ void VocabAdd(struct Vocabulary* vcb, char* str, int cnt) {
     }
   }
   vcb->id2cnt[id] += cnt;
-  return;
+  return id;
 }
 
 int* value_for_compare;
