@@ -1,6 +1,7 @@
 SHELL := /bin/bash
 CC = gcc
 DEBUG ?= 0
+NOEXEC ?= 0
 
 
 #Using -Ofast instead of -O3 might result in faster code,
@@ -23,14 +24,17 @@ endif
 	mkdir -p $(dir $(DIR)/$@)
 	$(CC) $< -o $(DIR)/$@ $(CFLAGS)
 
+ifeq ($(NOEXEC), 0)
 	$(eval STR_LENGTH :=  $(shell echo $(DIR)/$@ | wc -m))
 	$(eval STR_LENGTH :=  $(shell echo 70 - $(STR_LENGTH) | bc))
 	@echo -en "\033[1;36m"; printf '==== RUN: '; echo -n "$(DIR)/$@ "
 	@printf '=%.0s' {1..$(STR_LENGTH)}; echo -e "\033[0m"
-
 	@$(BIN) ./$(DIR)/$@
-
 	@echo -en "\033[1;36m"; printf '=%.0s' {1..80}; echo -e "\033[0m"
+else
+	@echo -en "\033[1;31m"; printf '=%.0s' {1..80}; echo -e "\033[0m"
+endif
+
 clean:
 	rm -rf $(DIR)/*
 

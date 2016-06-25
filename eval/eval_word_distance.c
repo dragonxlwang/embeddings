@@ -5,9 +5,8 @@
 #include "../utils/util_num.c"
 #include "../utils/util_text.c"
 #include "../vectors/variables.c"
-#include "eval_load_model.c"
 
-void EvalWordDistance(real* e, struct Vocabulary* vcb, char* sim_method) {
+void EvalWordDistance(real* e, Vocabulary* vcb, char* sim_method) {
   int i;
   char word[WUP];
   int wid;
@@ -49,12 +48,11 @@ void EvalWordDistance(real* e, struct Vocabulary* vcb, char* sim_method) {
   return;
 }
 
-int main() {
-  VariableInit();
+int main(int argc, char** argv) {
+  V_MODEL_LOAD = 1;
   NumInit();
-  ModelLoad();
-  /* W2vModelLoad(); */
-  EvalWordDistance(scr, vcb, "cosine");
-  /* EvalWordDistance(tar, vcb, "l2-dist"); */
+  VariableInit(argc, argv);
+  EvalWordDistance(model->scr, vcb, "cosine");
+  /* EvalWordDistance(model->tar, vcb, "l2-dist"); */
   return 0;
 }

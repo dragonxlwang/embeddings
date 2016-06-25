@@ -33,7 +33,12 @@ real NumExp(real x) {
     return NUM_EXP_TABLE[i];
 }
 
-unsigned long long int RANDOM_SEED = 0x0F0F0F0FL;
+real NumRandNext(unsigned long long *seed) {
+  *seed = (((*seed) * 0x5DEECE66DL + 0x0A) & 0xFFFFFFFFFFFFL);
+  return ((real)(*seed) / ((real)0xFFFFFFFFFFFFL));
+}
+
+unsigned long long RANDOM_SEED = 0x0F0F0F0FL;
 real NumRand() {
   // return a random number range from [0, 1)
   RANDOM_SEED = ((RANDOM_SEED * 0x5DEECE66DL + 0x0A) & 0xFFFFFFFFFFFFL);
@@ -90,6 +95,13 @@ void NumPrintArr(char *name, real *arr, int l) {
   return;
 }
 
+void NumPrintAllArr(real *arr, int l) {
+  int i = 0;
+  for (i = 0; i < l; i++) printf("%12.6g ", arr[i]);
+  printf("\n");
+  fflush(stdout);
+  return;
+}
 void NumPrintMatrix(char *name, real *arr, int m, int n) {
   int i;
   int abbrv = 0;
@@ -131,7 +143,7 @@ void NumPrintArrAbsMaxColor(char *name, real *arr, int l) {
   fflush(stdout);
 }
 
-real *NumNewHugeVec(long long int elem_num) {
+real *NumNewHugeVec(long long elem_num) {
   real *ptr;
   if (posix_memalign((void **)&ptr, 128, elem_num * sizeof(real))) {
     LOG(0, "[NumNewHugeVec]: memory allocation failed!\n");
@@ -140,7 +152,7 @@ real *NumNewHugeVec(long long int elem_num) {
   return ptr;
 }
 
-int *NumNewHugeIntVec(long long int elem_num) {
+int *NumNewHugeIntVec(long long elem_num) {
   int *ptr;
   if (posix_memalign((void **)&ptr, 128, elem_num * sizeof(int))) {
     LOG(0, "[NumNewHugeVec]: memory allocation failed!\n");
@@ -149,13 +161,13 @@ int *NumNewHugeIntVec(long long int elem_num) {
   return ptr;
 }
 
-real *NumCLoneHugeVec(real *vec, long long int elem_num) {
+real *NumCLoneHugeVec(real *vec, long long elem_num) {
   real *ptr = NumNewHugeVec(elem_num);
   memcpy(ptr, vec, elem_num * sizeof(real));
   return ptr;
 }
 
-int *NumCLoneHugeIntVec(int *vec, long long int elem_num) {
+int *NumCLoneHugeIntVec(int *vec, long long elem_num) {
   int *ptr = NumNewHugeIntVec(elem_num);
   memcpy(ptr, vec, elem_num * sizeof(int));
   return ptr;
@@ -185,8 +197,8 @@ void NumCopyIntVec(int *d, real *s, int l) {
   return;
 }
 
-void NumReadVec(real *ptr, long long int elem_num, FILE *fin) {
-  long long int actual_read_size = fread(ptr, sizeof(real), elem_num, fin);
+void NumReadVec(real *ptr, long long elem_num, FILE *fin) {
+  long long actual_read_size = fread(ptr, sizeof(real), elem_num, fin);
   if (actual_read_size != elem_num) {
     LOG(0, "[NumReadVec]: read error!");
     exit(1);
@@ -307,6 +319,21 @@ real NumSoftMax(real *a, real d, int l) {
   return (e > 0) ? e : 0;
 }
 
+real NumSigmoid(real x) {
+  real y;
+  if (x >= -NUM_EXP_LOW)
+    return 1;
+  else if (x <= NUM_EXP_LOW)
+    return 0;
+  else if (x < 0) {
+    y = NumExp(x);
+    return y / (1 + y);
+  } else {
+    y = NumExp(-x);
+    return 1 / (1 + y);
+  }
+}
+
 void NumVecProjUnitSphere(real *a, real s, int l) {
   // project to unit sphere
   NumVecMulC(a, s / NumVecNorm(a, l), l);
@@ -374,6 +401,69 @@ real NumVecVar(real *a, int l) {
 
 real NumVecStd(real *a, int l) { return sqrt(NumVecVar(a, l)); }
 
+void NumMultinomialWRBInit(real *m, int l, int if_sorted, int **a_ptr,
+                           real **p_ptr) {
+  pair *tl;
+  int i;
+  real q;
+  if (if_sorted) {
+    tl = array2tuples(m, l);
+  } else {
+    tl = sorted(m, l, 1);
+  }
+  int f = 0;
+  int r = l - 1;
+  int *a = NumNewHugeIntVec(l);
+  real *p = NumNewHugeVec(l);
+  for (i = 0; i < l; i++) p[tl[i].key] = tl[i].val * l;
+  while (1) {
+    if (p[tl[f].key] > 1 && p[tl[r].key] < 1) {  // rear underflow
+      q = 1 - p[tl[r].key];                      // underflow probability
+      a[tl[r].key] = tl[f].key;                  // alias
+      p[tl[f].key] -= q;                         // probability
+      r--;
+    } else if (p[tl[f].key] < 1 && p[tl[f + 1].key] > 1) {  // front underflow
+      q = 1 - p[tl[f].key];
+      a[tl[f].key] = tl[f + 1].key;
+      p[tl[f + 1].key] -= q;
+      f++;
+    } else
+      break;
+  }
+  free(tl);
+  *p_ptr = p;
+  *a_ptr = a;
+  return;
+}
+
+int NumMultinomialWRBSample(int *a, real *p, int l, unsigned long long *rs) {
+  if (!rs) rs = &RANDOM_SEED;
+  int r1 = NumRandNext(rs) * l;
+  real r2 = NumRandNext(rs);
+  if (r2 < p[r1])
+    return r1;
+  else
+    return a[r1];
+}
+
+int *NumMultinomialTableInit(real *m, int l, real r) {
+  int *x = NumNewHugeIntVec(r * l);
+  int i = 0, j = 0;
+  real c = 0;
+  while (1) {
+    c += m[i] * r * l;
+    while (j < c) x[j++] = i;
+    if (++i == l) break;
+  }
+  return x;
+}
+
+int NumMultinomialTableSample(int *x, int l, real r, unsigned long long *rs) {
+  if (!rs) rs = &RANDOM_SEED;
+  int j = NumRandNext(rs) * l * r;
+  return x[j];
+}
+
 void NumInit() {
   // Initialize exp table;
   int i;
@@ -385,48 +475,3 @@ void NumInit() {
 }
 
 #endif /* end of include guard: UTIL_NUM */
-
-/*
-void InitConstant() {
-  seed = 0x0F0F0F0FL;
-  SMN_SIZE = 3 * s3eM * s3eM * s3eN + 2 * s3eM * s3eM + s3eN;
-  DSMN_SIZE = 3 * s3eM * s3eM * s3eN + s3eM * s3eM + 2 * s3eN;
-  SYN_SIZE = s3eM * (s3eM + 1) * (s3eM + 1);
-  return;
-}
-
-void Perm_Gen(int i, int j, int *word_ids, int *neg_word_ids, int l) {
-  int k;
-  for (k = 0; k < l; k++) neg_word_ids[k] = word_ids[k];
-  SWAP(neg_word_ids[i], neg_word_ids[j]);
-  return;
-}
-
-void Flip_Gen(int i, int w, int *word_ids, int *neg_word_ids, int l) {
-  int k;
-  for (k = 0; k < l; k++) neg_word_ids[k] = word_ids[k];
-  neg_word_ids[i] = w;
-  return;
-}
-
-/////////////
-// Numeric //
-/////////////
-void InitSquashTable() {
-  AllocAlignMem("s3eExpTable", (void **)&s3eExpTable,
-                (long long)(s3eSquashTableSize + 1) * sizeof(real));
-  AllocAlignMem("s3eSigmTable", (void **)&s3eSigmTable,
-                (long long)(s3eSquashTableSize + 1) * sizeof(real));
-  AllocAlignMem("s3eTanhTable", (void **)&s3eTanhTable,
-                (long long)(s3eSquashTableSize + 1) * sizeof(real));
-  int i;
-  for (i = 0; i <= s3eSquashTableSize; i++) {
-    real r =
-        exp(((real)i / s3eSquashTableSize * 2 - 1.0) * s3eSquashTableRange);
-    s3eExpTable[i] = r;
-    s3eSigmTable[i] = r / (r + 1.0);
-    s3eTanhTable[i] = (r * r - 1.0) / (r * r + 1.0);
-  }
-  return;
-}
-*/

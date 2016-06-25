@@ -8,14 +8,13 @@
 #include "../vectors/variables.c"
 #include "eval_load_model.c"
 
-struct Vocabulary* vcb;
-real *tar, *scr;
+Vocabulary* vcb;
 
 void GetSentEmbd(int* wids, int wnum, real* embd) {
   int i;
   NumFillZeroVec(embd, N);
   for (i = 0; i < wnum; i++)
-    NumVecAddCVec(embd, tar + wids[i] * N, 1.0 / wnum, N);
+    NumVecAddCVec(embd, model->tar + wids[i] * N, 1.0 / wnum, N);
   return;
 }
 

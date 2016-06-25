@@ -31,7 +31,7 @@ int GetStrHash(char* str) {
 }
 
 // vocabulary, a hash map
-struct Vocabulary {
+typedef struct Vocabulary {
   char** id2wd;
   int* id2cnt;
   int* id2next;
@@ -39,11 +39,11 @@ struct Vocabulary {
   int size;
   // initial settings
   int VCB_CAP;
-};
+} Vocabulary;
 
 void VocabSetHashSlots(int hs) { HASH_SLOTS = hs; }
 
-void VocabInitStorage(struct Vocabulary* vcb, int cap) {
+void VocabInitStorage(Vocabulary* vcb, int cap) {
   vcb->id2wd = (char**)malloc(cap * sizeof(char*));
   vcb->id2cnt = (int*)malloc(cap * sizeof(int));
   vcb->id2next = (int*)malloc(cap * sizeof(int));
@@ -57,7 +57,7 @@ void VocabInitStorage(struct Vocabulary* vcb, int cap) {
   memset(vcb->hash2head, 0xFF, HASH_SLOTS * sizeof(int));
 }
 
-void VocabClearStorage(struct Vocabulary* vcb) {
+void VocabClearStorage(Vocabulary* vcb) {
   int i;
   for (i = 0; i < vcb->size; i++) free(vcb->id2wd[i]);
   free(vcb->id2wd);
@@ -67,26 +67,25 @@ void VocabClearStorage(struct Vocabulary* vcb) {
   return;
 }
 
-struct Vocabulary* VocabCreate(int cap) {
-  struct Vocabulary* vcb =
-      (struct Vocabulary*)malloc(sizeof(struct Vocabulary));
+Vocabulary* VocabCreate(int cap) {
+  Vocabulary* vcb = (Vocabulary*)malloc(sizeof(Vocabulary));
   VocabInitStorage(vcb, cap);
   return vcb;
 }
 
-void VocabDestroy(struct Vocabulary* vcb) {
+void VocabFree(Vocabulary* vcb) {
   VocabClearStorage(vcb);
   free(vcb);
   return;
 }
 
-int VocabAdd(struct Vocabulary* vcb, char* str, int cnt) {
+int VocabAdd(Vocabulary* vcb, char* str, int cnt) {
   int h = GetStrHash(str);
   int id = vcb->hash2head[h];
   while (id != -1 && strcmp(vcb->id2wd[id], str) != 0) id = vcb->id2next[id];
   if (id == -1) {
     id = vcb->size++;
-    STR_CLONE(vcb->id2wd[id], str);
+    vcb->id2wd[id] = sclone(str);
     vcb->id2cnt[id] = 0;
     vcb->id2next[id] = vcb->hash2head[h];
     vcb->hash2head[h] = id;
@@ -106,7 +105,7 @@ int CmpVal(const void* x, const void* y) {
   return value_for_compare[*((int*)y)] - value_for_compare[*((int*)x)];
 }
 
-void VocabReduce(struct Vocabulary* vcb, int cap) {  // if cap = -1,  no limit
+void VocabReduce(Vocabulary* vcb, int cap) {  // if cap = -1,  no limit
   int i;
   int* keys = (int*)malloc(vcb->size * sizeof(int));
   for (i = 0; i < vcb->size; i++) keys[i] = i;
@@ -117,7 +116,7 @@ void VocabReduce(struct Vocabulary* vcb, int cap) {  // if cap = -1,  no limit
   char** words = (char**)malloc(size * sizeof(char*));
   int* counts = (int*)malloc(size * sizeof(int));
   for (i = 0; i < size; i++) {
-    STR_CLONE(words[i], vcb->id2wd[keys[i]]);
+    words[i] = sclone(vcb->id2wd[keys[i]]);
     counts[i] = vcb->id2cnt[keys[i]];
   }
   VocabClearStorage(vcb);
@@ -130,14 +129,15 @@ void VocabReduce(struct Vocabulary* vcb, int cap) {  // if cap = -1,  no limit
   return;
 }
 
-int VocabGetId(struct Vocabulary* vcb, char* str) {
+int VocabGetId(Vocabulary* vcb, char* str) {
   int h = GetStrHash(str);
   int id = vcb->hash2head[h];
   while (id != -1 && strcmp(vcb->id2wd[id], str) != 0) id = vcb->id2next[id];
   return id;  // UNK = -1 or in vocab
 }
 
-char* VocabGetWord(struct Vocabulary* vcb, int id) { return vcb->id2wd[id]; }
+char* VocabGetWord(Vocabulary* vcb, int id) { return vcb->id2wd[id]; }
+int VocabGetCount(Vocabulary* vcb, int id) { return vcb->id2cnt[id]; }
 
 //////////
 // Text //
@@ -222,11 +222,11 @@ int TextNormWord(char* str, int if_lower, int if_rm_trail_punc) {
   return flag;
 }
 
-struct Vocabulary* TextBuildVocab(char* text_file_path, int if_norm_word,
-                                  int cap) {  // cap = -1 if no limit
+Vocabulary* TextBuildVocab(char* text_file_path, int if_norm_word,
+                           int cap) {  // cap = -1 if no limit
   char str[TEXT_MAX_WORD_LEN];
   int flag = 0;
-  struct Vocabulary* vcb = VocabCreate(TEXT_INIT_VCB_CAP);
+  Vocabulary* vcb = VocabCreate(TEXT_INIT_VCB_CAP);
   FILE* fin = fopen(text_file_path, "rb");
   TEXT_CORPUS_WORD_CNT = 0;
   if (!fin) {
@@ -255,18 +255,18 @@ struct Vocabulary* TextBuildVocab(char* text_file_path, int if_norm_word,
   return vcb;
 }
 
-void TextSaveVocab(char* vcb_fp, struct Vocabulary* vcb) {
+void TextSaveVocab(char* vcb_fp, Vocabulary* vcb) {
   int i;
   FILE* fout = fopen(vcb_fp, "wb");
   fprintf(fout, "%lld %lld\n", TEXT_CORPUS_FILE_SIZE, TEXT_CORPUS_WORD_CNT);
   for (i = 0; i < vcb->size; i++)
     fprintf(fout, "%s %d\n", vcb->id2wd[i], vcb->id2cnt[i]);
   fclose(fout);
-  LOG(1, "[saving vocabulary]: %s\n", vcb_fp);
+  LOG(1, "[VOCABULARY]: Save to %s\n", vcb_fp);
   return;
 }
 
-struct Vocabulary* TextLoadVocab(char* vcb_fp, int cap, int high_freq_cutoff) {
+Vocabulary* TextLoadVocab(char* vcb_fp, int cap, int high_freq_cutoff) {
   // cap: -1=no limit; high_freq_cutoff: first h_f_c number of words removed;
   int cnt, flag, id = 0;
   FILE* fin = fopen(vcb_fp, "rb");
@@ -276,7 +276,7 @@ struct Vocabulary* TextLoadVocab(char* vcb_fp, int cap, int high_freq_cutoff) {
     exit(1);
   }
   fscanf(fin, "%lld %lld\n", &TEXT_CORPUS_FILE_SIZE, &TEXT_CORPUS_WORD_CNT);
-  struct Vocabulary* vcb =
+  Vocabulary* vcb =
       VocabCreate((cap > 0) ? (int)(cap * 1.1) : TEXT_INIT_VCB_CAP);
   while (1) {
     TextReadWord(fin, s_word);
@@ -288,14 +288,14 @@ struct Vocabulary* TextLoadVocab(char* vcb_fp, int cap, int high_freq_cutoff) {
   }
   fclose(fin);
   LOG(1,
-      "[loading vocabulary]: %s\n"
-      "[loading vocabulary]: size %d\n",
+      "[VOCABULARY]: Load from %s\n"
+      "              size %d\n",
       vcb_fp, vcb->size);
   return vcb;
 }
 
-int TextReadSent(FILE* fin, struct Vocabulary* vcb, int* word_ids,
-                 int if_norm_word, int till_line_end) {
+int TextReadSent(FILE* fin, Vocabulary* vcb, int* word_ids, int if_norm_word,
+                 int till_line_end) {
   // if till_line_end = 1, each line is one sentence
   // else, line is delimited by punctuation (newline alone won't stop reading)
   // EOF info is not exposed to caller function
@@ -316,7 +316,7 @@ int TextReadSent(FILE* fin, struct Vocabulary* vcb, int* word_ids,
   return word_num;
 }
 
-void TextPrintSent(struct Vocabulary* vcb, int* word_ids, int word_num) {
+void TextPrintSent(Vocabulary* vcb, int* word_ids, int word_num) {
   int i;
   for (i = 0; i < word_num; i++)
     printf("%s(%d) ", VocabGetWord(vcb, word_ids[i]), word_ids[i]);
@@ -324,37 +324,11 @@ void TextPrintSent(struct Vocabulary* vcb, int* word_ids, int word_num) {
   return;
 }
 
-void TextPrintSentWord(struct Vocabulary* vcb, int* word_ids, int word_num) {
+void TextPrintSentWord(Vocabulary* vcb, int* word_ids, int word_num) {
   int i;
   for (i = 0; i < word_num; i++) printf("%s ", VocabGetWord(vcb, word_ids[i]));
   printf("\n");
   return;
 }
-
-/*
-   long long int neg_unigram_size = 1e8;
-   void InitNegUnigram()
-   {
-   long long int i, j, k, total_word_cnt = 0, cnt = 0;
-   real cdf, power = 0.75;
-   for (i = 0; i < vocab.size; i++)
-   total_word_cnt += pow(vocab.id2cnt[i], power);
-   neg_unigram = (int*)malloc(1e8 * sizeof(int));
-   for (i = 0, j = 0; i < vocab.size; i++) {
-   cnt += pow(vocab.id2cnt[i], power);
-   cdf = (real)cnt / total_word_cnt;
-   cdf = (cdf > 1.0) ? 1.0 : cdf;
-   k = neg_unigram_size * cdf;
-   while (j < k)
-   neg_unigram[j++] = i;
-   }
-   return;
-   }
-   int SampleNegUnigram(unsigned long long int s)
-   {
-   long long int r = RAND(s) * neg_unigram_size;
-   return neg_unigram[r];
-   }
-   */
 
 #endif /* end of include guard: UTIL_TEXT */

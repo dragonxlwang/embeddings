@@ -5,11 +5,10 @@
 #include "../utils/util_num.c"
 #include "../utils/util_text.c"
 #include "../vectors/variables.c"
-#include "eval_load_model.c"
 
 char* EV_QUESTION_FILE_PATH = "~/data/w2v/questions-words.txt";
 
-void EvalQuestionAccuracy(real* e, struct Vocabulary* vcb, int V) {
+void EvalQuestionAccuracy(real* e, Vocabulary* vcb, int V) {
   EV_QUESTION_FILE_PATH = FilePathExpand(EV_QUESTION_FILE_PATH);
   char st1[WUP], st2[WUP], st3[WUP], st4[WUP];
   real vec[NUP];
@@ -108,15 +107,14 @@ void EvalQuestionAccuracy(real* e, struct Vocabulary* vcb, int V) {
   printf("Questions seen / total: %d %d   %.2f %% \n", TQS, TQ,
          TQS / (float)TQ * 100);
   fclose(fin);
-  HeapDestroy(h);
+  HeapFree(h);
   return;
 }
 
-int main() {
-  VariableInit();
+int main(int argc, char** argv) {
+  V_MODEL_LOAD = 1;
+  VariableInit(argc, argv);
   NumInit();
-  ModelLoad();
-  /* W2vModelLoad(); */
-  EvalQuestionAccuracy(scr, vcb, SMALLER(10000, V));
+  EvalQuestionAccuracy(model->scr, vcb, SMALLER(10000, V));
   return 0;
 }

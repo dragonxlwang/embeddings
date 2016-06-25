@@ -5,9 +5,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 #include <wordexp.h>
 
-// util_misc.c shall not include other util_XXXX files but can be included
+// util_misc.c shall only include system include files
 // sid_module_name prefix indicate functions/variables shall not be accessed
 //    directly; for variables, a suffix '_' is used.
 // Parameters:
@@ -60,23 +61,19 @@ int log_debug_mode = 2;
       fflush(stdout);                      \
     }                                      \
   })
-#define LOGCLN(log_dbg_level)              \
+#define LOGCLR(log_dbg_level)              \
   ({                                       \
     if (log_debug_mode >= log_dbg_level) { \
       printf("\33[2K\r");                  \
       fflush(stdout);                      \
     }                                      \
   })
-#define ARR_CLONE(d, s, l)                                        \
-  ({                                                              \
-    d = (__typeof__(s[0]) *)malloc(l * sizeof(__typeof__(s[0]))); \
-    int i;                                                        \
-    for (i = 0; i < l; i++) d[i] = s[i];                          \
-  })
-#define STR_CLONE(d, s)                                 \
-  ({                                                    \
-    d = (char *)malloc((strlen(s) + 1) * sizeof(char)); \
-    strcpy(d, s);                                       \
+#define LOGCR(log_dbg_level)               \
+  ({                                       \
+    if (log_debug_mode >= log_dbg_level) { \
+      printf("\n");                        \
+      fflush(stdout);                      \
+    }                                      \
   })
 #define LOWER(c) (((c) >= 'A' && (c) <= 'Z') ? (c) - 'A' + 'a' : (c))
 #define UPPER(c) (((c) >= 'a' && (c) <= 'z') ? (c) - 'a' + 'A' : (c))
@@ -106,6 +103,12 @@ char *sconcat(char *sa, char *sb, int la, int lb) {
   return s;
 }
 
+char *sclone(char *s) {
+  char *d = (char *)malloc((strlen(s) + 1) * sizeof(char));
+  strcpy(d, s);
+  return d;
+}
+
 char *sformat(char *fmt, ...) {
   // sort of like sprintf, but allocate string with malloc. max length 4096
   char s[0x1000] = {0};
@@ -114,18 +117,14 @@ char *sformat(char *fmt, ...) {
   va_start(al, fmt);
   vsprintf(s, fmt, al);
   va_end(al);
-  STR_CLONE(ss, s);
+  ss = sclone(s);
   return ss;
 }
 
-char *vsformatc(char fg_color_code, char bg_color_code, const char *fmt,
-                va_list al) {
-  char f = (fg_color_code >= 'A' && fg_color_code <= 'Z')
-               ? fg_color_code + 'a' - 'A'
-               : fg_color_code;
-  char b = (bg_color_code >= 'A' && bg_color_code <= 'Z')
-               ? bg_color_code + 'a' - 'A'
-               : bg_color_code;
+void vsprintfc(char *str, char fg_color_code, char bg_color_code,
+               const char *fmt, va_list al) {
+  char f = LOWER(fg_color_code);
+  char b = LOWER(bg_color_code);
   char *fg, *bg;
   switch (f) {
     case 'w':
@@ -186,13 +185,17 @@ char *vsformatc(char fg_color_code, char bg_color_code, const char *fmt,
     default:
       exit(1);
   }
-  char s[0x1000] = {0};
+  sprintf(str, "%s%s", fg, bg);
+  vsprintf(str + strlen(str), fmt, al);
+  sprintf(str + strlen(str), "%s", ANSI_COLOR_RESET);
+}
+
+char *vsformatc(char fg_color_code, char bg_color_code, const char *fmt,
+                va_list al) {
+  char s[0x1000];
   char *ss;
-  strcat(s, fg);
-  strcat(s, bg);
-  vsprintf(s + strlen(s), fmt, al);
-  strcat(s, ANSI_COLOR_RESET);
-  STR_CLONE(ss, s);
+  vsprintfc(s, fg_color_code, bg_color_code, fmt, al);
+  ss = sclone(s);
   return ss;
 }
 
@@ -214,6 +217,32 @@ void printfc(char fg_color_code, char bg_color_code, const char *fmt, ...) {
   return;
 }
 
+void saprintf(char *str, const char *fmt, ...) {
+  va_list al;
+  va_start(al, fmt);
+  vsprintf(str + strlen(str), fmt, al);
+  va_end(al);
+  return;
+}
+
+void sprintfc(char *str, char fg_color_code, char bg_color_code,
+              const char *fmt, ...) {
+  va_list al;
+  va_start(al, fmt);
+  vsprintfc(str, fg_color_code, bg_color_code, fmt, al);
+  va_end(al);
+  return;
+}
+
+void saprintfc(char *str, char fg_color_code, char bg_color_code,
+               const char *fmt, ...) {
+  va_list al;
+  va_start(al, fmt);
+  vsprintfc(str + strlen(str), fg_color_code, bg_color_code, fmt, al);
+  va_end(al);
+  return;
+}
+
 char *strtime(int s) {
   int ss = s;
   int mm = ss / 60;
@@ -223,6 +252,18 @@ char *strtime(int s) {
   int dd = hh / 24;
   hh %= 24;
   return sformat("%02d:%02d:%02d:%02d", dd, hh, mm, ss);
+}
+
+char *strclock(clock_t t1, clock_t t2, int thread_num) {
+  return strtime((double)(t2 - t1) / CLOCKS_PER_SEC / thread_num);
+}
+
+int getoptpos(char *str, int argc, char **argv) {
+  // return the position of command line argument of str; return -1 if not found
+  int i;
+  for (i = 1; i < argc; i++)
+    if (!strcmp(str, argv[i])) return i;
+  return -1;
 }
 
 /***
@@ -262,6 +303,18 @@ char *FilePathSubExtension(char *fp, char *ext) {
   memcpy(nfp + i + 1, ext, strlen(ext));
   nfp[i + 1 + strlen(ext)] = '\0';
   return nfp;
+}
+
+long int FileSize(char *fp) {
+  FILE *fin = fopen(fp, "rb");
+  if (!fin) {
+    LOG(0, "Error\n");
+    exit(1);
+  }
+  fseek(fin, 0, SEEK_END);
+  long int fsz = ftell(fin);
+  fclose(fin);
+  return fsz;
 }
 
 /***
@@ -409,7 +462,7 @@ heap *HeapCreate(int k) {
   h->size = 0;
   return h;
 }
-void HeapDestroy(heap *h) {
+void HeapFree(heap *h) {
   free(h->d);
   free(h);
   return;

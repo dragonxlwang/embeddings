@@ -8,10 +8,9 @@
 #include "../utils/util_misc.c"
 #include "../utils/util_num.c"
 #include "../utils/util_text.c"
-#include "peek.c"
 #include "variables.c"
 
-struct Vocabulary* vcb;
+Vocabulary* vcb;
 int** lwids;
 int* lwnum;
 long long int num;
@@ -39,7 +38,7 @@ void permute() {
   lwnum = (int*)malloc(cap * sizeof(int));
   while (!feof(fin)) {
     wnum = TextReadSent(fin, vcb, wids, 1, 1);
-    ARR_CLONE(lwids[num], wids, wnum);
+    lwids[num] = NumCloneIntVec(wids, wnum);
     lwnum[num] = wnum;
     num++;
     if (num == cap) {
