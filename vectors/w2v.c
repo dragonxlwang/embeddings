@@ -15,10 +15,12 @@
 #include "../vectors/peek.c"
 #include "../vectors/variables.c"
 
-int *w2v_nswrh_a;   // WRH sample alias array
-real *w2v_nswrh_p;  // WRH sample probability array
-int *w2v_nstable;   // Table sample
-real w2v_nstable_r;
+int *w2v_nswrh_a;    // WRH sample alias array
+real *w2v_nswrh_p;   // WRH sample probability array
+int *w2v_nstable;    // Table sample
+real w2v_nstable_r;  // Table size ratio
+real *w2v_neg_prob;
+real *w2v_neg_prob_log;
 
 int sid_w2v_ppb_lock = 0;
 void W2vThreadPrintProgBar(int dbg_lvl, int tid, real p) {
@@ -47,18 +49,20 @@ void W2vCreateNegSampleInit() {
   LOG(2, "[NS]: Init\n");
   int i;
   real s = 0;
-  real *m = NumNewHugeVec(V);
+  w2v_neg_prob = NumNewHugeVec(V);
+  w2v_neg_prob_log = NumNewHugeVec(V);
   for (i = 0; i < V; i++) {
-    m[i] = pow(VocabGetCount(vcb, i), V_NS_POWER);
-    s += m[i];
+    w2v_neg_prob[i] = pow(VocabGetCount(vcb, i), V_NS_POWER);
+    s += w2v_neg_prob[i];
   }
-  for (i = 0; i < V; i++) m[i] /= s;
+  for (i = 0; i < V; i++) w2v_neg_prob[i] /= s;
   if (V_NS_WRH)
-    NumMultinomialWRBInit(m, V, 1, &w2v_nswrh_a, &w2v_nswrh_p);
+    NumMultinomialWRBInit(w2v_neg_prob, V, 1, &w2v_nswrh_a, &w2v_nswrh_p);
   else {
     w2v_nstable_r = SMALLER(((real)1e8) / V, 100);
-    w2v_nstable = NumMultinomialTableInit(m, V, w2v_nstable_r);
+    w2v_nstable = NumMultinomialTableInit(w2v_neg_prob, V, w2v_nstable_r);
   }
+  for (i = 0; i < V; i++) w2v_neg_prob_log[i] = log(V_NS_NEG * w2v_neg_prob[i]);
   return;
 }
 
@@ -106,7 +110,11 @@ void W2vUpdate(int *ids, int l, unsigned long long *rs) {
     for (j = 0; j <= V_NS_NEG; j++) {
       k = (j == 0) ? ids[md] : W2vNegSample(rs);
       label = (j == 0) ? 1 : 0;
-      f = NumSigmoid(NumVecDot(h, model->tar + k * N, N));
+      if (V_NCE)  // NCE
+        f = NumSigmoid(NumVecDot(h, model->tar + k * N, N) -
+                       w2v_neg_prob_log[k]);
+      else  // NS
+        f = NumSigmoid(NumVecDot(h, model->tar + k * N, N));
       ModelGradUpdate(model, 1, k, -(label - f) * gd_ss, h);  // up m->tar
       ModelVecRegularize(model, 1, k, V_MODEL_PROJ_BALL_NORM,
                          V_L2_REGULARIZATION_WEIGHT);

@@ -14,26 +14,140 @@ else bin=$train
 fi
 
 dcme=" \
-V_MODEL_DECOR_FILE_PATH gd-1e-4_uniball_micro-me \
-V_INIT_GRAD_DESCENT_STEP_SIZE 1e-4 \
-V_MODEL_PROJ_BALL_NORM 1e2 \
-V_MICRO_ME 1"
+  V_MODEL_DECOR_FILE_PATH gd-1e-4_uniball_no-cutoff \
+  V_INIT_GRAD_DESCENT_STEP_SIZE 1e-4 \
+  V_MODEL_PROJ_BALL_NORM 1e2 \
+  V_VOCAB_HIGH_FREQ_CUTOFF 0"
 
-w2v=" \
-V_MODEL_DECOR_FILE_PATH w2v_gd-1e-2_ns-wrh \
-V_TRAIN_METHOD w2v \
-V_INIT_GRAD_DESCENT_STEP_SIZE 1e-2 \
-V_NS_WRH 1 "
+# V_MODEL_DECOR_FILE_PATH gd-1e-4_uniball_micro-me \
+  # V_INIT_GRAD_DESCENT_STEP_SIZE 1e-4 \
+  # V_MODEL_PROJ_BALL_NORM 1e2 \
+  # V_MICRO_ME 1"
 
-[[ $2 == "w2v"  ]] && model=$w2v || model=$dcme
+w2v_1=" \
+  V_MODEL_DECOR_FILE_PATH w2v_gd-1e-2_ns_wrh \
+  V_TRAIN_METHOD w2v \
+  V_INIT_GRAD_DESCENT_STEP_SIZE 1e-2 \
+  V_NCE 0 \
+  V_NS_WRH 1 "
 
+w2v_2=" \
+  V_MODEL_DECOR_FILE_PATH w2v_gd-1e-3_ns_wrh \
+  V_TRAIN_METHOD w2v \
+  V_INIT_GRAD_DESCENT_STEP_SIZE 1e-3 \
+  V_NCE 0 \
+  V_NS_WRH 1 "
+
+w2v_3=" \
+  V_MODEL_DECOR_FILE_PATH w2v_gd-1e-2_nce_wrh \
+  V_TRAIN_METHOD w2v \
+  V_INIT_GRAD_DESCENT_STEP_SIZE 1e-2 \
+  V_NCE 1 \
+  V_NS_WRH 1 "
+
+w2v_4=" \
+  V_MODEL_DECOR_FILE_PATH w2v_gd-1e-3_nce_wrh \
+  V_TRAIN_METHOD w2v \
+  V_INIT_GRAD_DESCENT_STEP_SIZE 1e-3 \
+  V_NCE 1 \
+  V_NS_WRH 1 "
+
+w2v_5=" \
+  V_MODEL_DECOR_FILE_PATH w2v_gd-1e-2_ns_wrh_pow-1 \
+  V_TRAIN_METHOD w2v \
+  V_INIT_GRAD_DESCENT_STEP_SIZE 1e-2 \
+  V_NCE 0 \
+  V_NS_WRH 1 \
+  V_NS_POWER 1"
+
+w2v_6=" \
+  V_MODEL_DECOR_FILE_PATH w2v_gd-1e-3_ns_wrh_pow-1 \
+  V_TRAIN_METHOD w2v \
+  V_INIT_GRAD_DESCENT_STEP_SIZE 1e-3 \
+  V_NCE 0 \
+  V_NS_WRH 1 \
+  V_NS_POWER 1"
+
+w2v_7=" \
+  V_MODEL_DECOR_FILE_PATH w2v_gd-1e-2_nce_wrh_pow-1 \
+  V_TRAIN_METHOD w2v \
+  V_INIT_GRAD_DESCENT_STEP_SIZE 1e-2 \
+  V_NCE 1 \
+  V_NS_WRH 1 \
+  V_NS_POWER 1"
+
+w2v_8=" \
+  V_MODEL_DECOR_FILE_PATH w2v_gd-1e-3_nce_wrh_pow-1 \
+  V_TRAIN_METHOD w2v \
+  V_INIT_GRAD_DESCENT_STEP_SIZE 1e-3 \
+  V_NCE 1 \
+  V_NS_WRH 1 \
+  V_NS_POWER 1"
+
+dcme_1=" \
+  V_MODEL_DECOR_FILE_PATH dcme_gd-1e-4 \
+  V_TRAIN_METHOD dcme \
+  V_INIT_GRAD_DESCENT_STEP_SIZE 1e-4"
+
+dcme_2=" \
+  V_MODEL_DECOR_FILE_PATH dcme_gd-1e-4_nc \
+  V_TRAIN_METHOD dcme \
+  V_INIT_GRAD_DESCENT_STEP_SIZE 1e-4 \
+  V_VOCAB_HIGH_FREQ_CUTOFF 0"
+
+dcme_3=" \
+  V_MODEL_DECOR_FILE_PATH dcme_gd-1e-4_ub \
+  V_TRAIN_METHOD dcme \
+  V_INIT_GRAD_DESCENT_STEP_SIZE 1e-4 \
+  V_MODEL_PROJ_BALL_NORM 1e2"
+
+dcme_4=" \
+  V_MODEL_DECOR_FILE_PATH dcme_gd-1e-4_nc_ub \
+  V_TRAIN_METHOD dcme \
+  V_INIT_GRAD_DESCENT_STEP_SIZE 1e-4 \
+  V_VOCAB_HIGH_FREQ_CUTOFF 0 \
+  V_MODEL_PROJ_BALL_NORM 1e2"
+
+dcme_5=" \
+  V_MODEL_DECOR_FILE_PATH dcme_gd-1e-4_ub_mm \
+  V_TRAIN_METHOD dcme \
+  V_INIT_GRAD_DESCENT_STEP_SIZE 1e-4 \
+  V_MODEL_PROJ_BALL_NORM 1e2 \
+  V_MICRO_ME 1"
+
+dcme_6=" \
+  V_MODEL_DECOR_FILE_PATH dcme_gd-1e-4_nc_ub_mm \
+  V_TRAIN_METHOD dcme \
+  V_INIT_GRAD_DESCENT_STEP_SIZE 1e-4 \
+  V_VOCAB_HIGH_FREQ_CUTOFF 0 \
+  V_MODEL_PROJ_BALL_NORM 1e2 \
+  V_MICRO_ME 1"
+
+dcme_7=" \
+  V_MODEL_DECOR_FILE_PATH dcme_gd-1e-4_ub_mm_mmsu \
+  V_TRAIN_METHOD dcme \
+  V_INIT_GRAD_DESCENT_STEP_SIZE 1e-4 \
+  V_MODEL_PROJ_BALL_NORM 1e2 \
+  V_MICRO_ME 1 \
+  V_MICRO_ME_SCR_UPDATE 1"
+
+dcme_8=" \
+  V_MODEL_DECOR_FILE_PATH dcme_gd-1e-4_nc_ub_mm_mmsu \
+  V_TRAIN_METHOD dcme \
+  V_INIT_GRAD_DESCENT_STEP_SIZE 1e-4 \
+  V_VOCAB_HIGH_FREQ_CUTOFF 0 \
+  V_MODEL_PROJ_BALL_NORM 1e2 \
+  V_MICRO_ME 1 \
+  V_MICRO_ME_SCR_UPDATE 1"
+
+eval "model=\$$2"
 $bin $model
-
-  # V_MODEL_DECOR_FILE_PATH gd-1e-4 \
-  # V_INIT_GRAD_DESCENT_STEP_SIZE 1e-4
 
 
 ################################################################
+
+# V_MODEL_DECOR_FILE_PATH gd-1e-4 \
+  # V_INIT_GRAD_DESCENT_STEP_SIZE 1e-4
 
 # # P: 8.09%  Q: 13.44%
 # ./bin/vectors/train \

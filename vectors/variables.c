@@ -55,12 +55,15 @@ real V_OFFLINE_INTERVAL_VOCAB_RATIO = 1;
 int V_MICRO_ME = 0;
 // if also use micro-me adjusted distribution for updateing scr (w - ww)
 int V_MICRO_ME_SCR_UPDATE = 0;
+// Dual Reset option
+int V_DUAL_RESET_OPT = 1;
 int K = 20;  // number of dual cluster
-int Q = 10;  // Number of negative words updated online
+int Q = 10;  // Number of top words in online update
 // ----------------------------- W2V specific --------------------------------
 int V_NS_WRH = 1;
 real V_NS_POWER = 0.75;
 int V_NS_NEG = 5;
+int V_NCE = 0;
 
 // ---------------------------- global variables ------------------------------
 Vocabulary *vcb;        // vocabulary
@@ -255,6 +258,12 @@ void VariableInit(int argc, char **argv) {
     LOGC(1, c, 'k', "Micro ME adjusted distribution for updateing scr  : %d\n",
          V_MICRO_ME_SCR_UPDATE);
 
+    i = getoptpos("V_DUAL_RESET_OPT", argc, argv);
+    c = (i == -1) ? 'w' : 'r';
+    if (i != -1) V_DUAL_RESET_OPT = atoi(argv[i + 1]);
+    LOGC(1, c, 'k', "Dual Reset Option ------------------------------- : %d\n",
+         V_DUAL_RESET_OPT);
+
     i = getoptpos("K", argc, argv);
     c = (i == -1) ? 'w' : 'r';
     if (i != -1) K = atoi(argv[i + 1]);
@@ -286,6 +295,12 @@ void VariableInit(int argc, char **argv) {
     if (i != -1) V_NS_NEG = atoi(argv[i + 1]);
     LOGC(1, c, 'k', "Negative Sample number of words ----------------- : %d\n",
          V_NS_NEG);
+
+    i = getoptpos("V_NCE", argc, argv);
+    c = (i == -1) ? 'w' : 'r';
+    if (i != -1) V_NCE = atoi(argv[i + 1]);
+    LOGC(1, c, 'k', "Use Negative Contrastive Estimation ------------- : %d\n",
+         V_NCE);
   }
 
   LOGC(1, 'g', 'k', "== Sanity Checks ==\n");

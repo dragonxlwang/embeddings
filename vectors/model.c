@@ -148,6 +148,7 @@ char *ModelDebugInfoStr(Model *model, real p, int tid, clock_t start_clock_t,
   saprintf(str, " ");                                       //
   saprintf(str, "TIME:%.2e/%s ", st, ht);                   // time
   saprintf(str, "GDSS:%.4e ", gd_ss);                       // gdss
+  free(ht);
 #ifdef DEBUG
   real scr = NumVecNorm(model->scr, model->v * model->n);
   real ss = NumMatMaxRowNorm(model->scr, model->v, model->n);
@@ -160,7 +161,6 @@ char *ModelDebugInfoStr(Model *model, real p, int tid, clock_t start_clock_t,
   saprintfc(str, 'r', 'k', "%.2e", tt);            // tt
   saprintf(str, " ");                              //
 #endif
-  free(ht);
   return str;
 }
 
