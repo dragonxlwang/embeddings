@@ -39,9 +39,13 @@ int sid_dcme_ppb_lock = 0;
 void DcmeThreadPrintProgBar(int dbg_lvl, int tid, real p, DcmeBookkeeping* b) {
   if (sid_dcme_ppb_lock) return;
   sid_dcme_ppb_lock = 1;
+#ifdef DEBUG
+  if (NumRand() > 0.1) {
+    sid_dcme_ppb_lock = 0;
+    return;
+  }
   char* mdis =
       ModelDebugInfoStr(model, p, tid, start_clock_t, V_THREAD_NUM, gd_ss);
-#ifdef DEBUG
   char* ddis = malloc(0x1000);
   real eem = NumVecMean(b->ent, K);
   real ees = NumVecStd(b->ent, K);
@@ -71,6 +75,8 @@ void DcmeThreadPrintProgBar(int dbg_lvl, int tid, real p, DcmeBookkeeping* b) {
   free(mdis);
   free(ddis);
 #else
+  char* mdis =
+      ModelDebugInfoStr(model, p, tid, start_clock_t, V_THREAD_NUM, gd_ss);
   LOGCLR(dbg_lvl);
   if (V_MODEL_DECOR_FILE_PATH) LOG(dbg_lvl, "[%s]: ", V_MODEL_DECOR_FILE_PATH);
   LOG(dbg_lvl, "%s", mdis);
@@ -185,9 +191,8 @@ void DcmeMicroME(int zz, int ii, real* h, real* wd, DcmeBookkeeping* b) {
   NumSoftMax(twp, 1.0, twlen);
   NumVecMulC(twp, twps, twlen);
   if (twlen == Q + 1) twp[Q] -= b->dd[zz * V + ii];  // split
-  if (V_MICRO_ME_SCR_UPDATE) {
-    NumAddCVecDVec(model->tar + ii * N, b->ow + zz * N, 1, -1, N,
-                   wd);  // wd[i] <- w - ow - tw
+  if (V_MICRO_ME_SCR_UPDATE) {                       // wd[i] <- w - ow - tw
+    NumAddCVecDVec(model->tar + ii * N, b->ow + zz * N, 1, -1, N, wd);
     for (k = 0; k < twlen; k++)
       NumVecAddCVec(wd, model->tar + tw[k] * N, -twp[k], N);
   } else
@@ -231,8 +236,8 @@ int DcmeUpdate(int* ids, int l, DcmeBookkeeping* b, heap* twh) {
     } else {
       NumAddCVecDVec(model->tar + ids[i] * N, b->ww + zz * N, 1, -1, N,
                      wd + i * N);  // wd[i] <- w - ww
-      flag = 1;
-      for (k = 0; k < Q; k++) {  // up tar (pos, neg top words)
+      flag = 1;                    // current word in top words
+      for (k = 0; k < Q; k++) {    // up tar (pos, neg top words)
         j = b->tw[zz * Q + k];
         if (j == ids[i]) flag = 0;
         ModelGradUpdate(model, 1, j,
@@ -262,7 +267,7 @@ int DcmeUpdate(int* ids, int l, DcmeBookkeeping* b, heap* twh) {
         break;
     }
     if (b->hn[zz] >= V * V_OFFLINE_INTERVAL_VOCAB_RATIO) {  // update offline
-      offline_done = 1;                                     //
+      offline_done = 1;
       for (j = 0, k = 0; j < V; j++) {        // up m->tar (neg, other words)
         if (k < Q && j == b->tw[zz * Q + k])  // join two sorted list
           k++;

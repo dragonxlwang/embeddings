@@ -101,6 +101,8 @@ w2v_8=" \
   V_NS_POWER 1"
 
 # no cutoff
+# PEEK:1.74e-02
+# 28.98 %   Semantic accuracy: 17.00 %   Syntactic accuracy: 32.84 %
 w2v_9=" \
   V_MODEL_DECOR_FILE_PATH w2v_gd-1e-3_ns_wrh_nc \
   V_TRAIN_METHOD w2v \
@@ -108,6 +110,9 @@ w2v_9=" \
   V_NCE 0 \
   V_NS_WRH 1 \
   V_VOCAB_HIGH_FREQ_CUTOFF 0"
+
+# 28.71 %   Semantic accuracy: 15.89 %   Syntactic accuracy: 32.84 %
+# PEEK:1.74e-02
 w2v_10=" \
   V_MODEL_DECOR_FILE_PATH w2v_gd-1e-3_nce_wrh_nc \
   V_TRAIN_METHOD w2v \
@@ -115,6 +120,9 @@ w2v_10=" \
   V_NCE 1 \
   V_NS_WRH 1 \
   V_VOCAB_HIGH_FREQ_CUTOFF 0"
+
+# 26.60 %   Semantic accuracy: 15.54 %   Syntactic accuracy: 30.16 %
+# PEEK:1.63e-02
 w2v_11=" \
   V_MODEL_DECOR_FILE_PATH w2v_gd-1e-3_ns_wrh_pow-1_nc \
   V_TRAIN_METHOD w2v \
@@ -123,8 +131,11 @@ w2v_11=" \
   V_NS_WRH 1 \
   V_NS_POWER 1 \
   V_VOCAB_HIGH_FREQ_CUTOFF 0"
+
+# 26.91 %   Semantic accuracy: 16.24 %   Syntactic accuracy: 30.34 %
+# PEEK:1.62e-02
 w2v_12=" \
-  V_MODEL_DECOR_FILE_PATH w2v_gd-1e-3_nce_wrh_pow-1 \
+  V_MODEL_DECOR_FILE_PATH w2v_gd-1e-3_nce_wrh_pow-1_nc \
   V_TRAIN_METHOD w2v \
   V_INIT_GRAD_DESCENT_STEP_SIZE 1e-3 \
   V_NCE 1 \
@@ -132,23 +143,31 @@ w2v_12=" \
   V_NS_POWER 1 \
   V_VOCAB_HIGH_FREQ_CUTOFF 0"
 
+# 13.53 %   Semantic accuracy: 9.88 %   Syntactic accuracy: 14.67 %
+# PEEK:2.01e-02
 dcme_1=" \
   V_MODEL_DECOR_FILE_PATH dcme_gd-1e-4 \
   V_TRAIN_METHOD dcme \
   V_INIT_GRAD_DESCENT_STEP_SIZE 1e-4"
 
+# 9.66 %   Semantic accuracy: 11.38 %   Syntactic accuracy: 9.10 %
+# PEEK:1.09e-02
 dcme_2=" \
   V_MODEL_DECOR_FILE_PATH dcme_gd-1e-4_nc \
   V_TRAIN_METHOD dcme \
   V_INIT_GRAD_DESCENT_STEP_SIZE 1e-4 \
   V_VOCAB_HIGH_FREQ_CUTOFF 0"
 
+# 9.66 %   Semantic accuracy: 11.38 %   Syntactic accuracy: 9.10 %
+# PEEK:2.11e-02
 dcme_3=" \
   V_MODEL_DECOR_FILE_PATH dcme_gd-1e-4_ub \
   V_TRAIN_METHOD dcme \
   V_INIT_GRAD_DESCENT_STEP_SIZE 1e-4 \
   V_MODEL_PROJ_BALL_NORM 1e2"
 
+# 13.34 %   Semantic accuracy: 10.96 %   Syntactic accuracy: 14.10 %
+# PEEK:1.64e-02
 dcme_4=" \
   V_MODEL_DECOR_FILE_PATH dcme_gd-1e-4_nc_ub \
   V_TRAIN_METHOD dcme \
@@ -156,6 +175,8 @@ dcme_4=" \
   V_VOCAB_HIGH_FREQ_CUTOFF 0 \
   V_MODEL_PROJ_BALL_NORM 1e2"
 
+# 15.77 %   Semantic accuracy: 11.18 %   Syntactic accuracy: 17.21 %
+# PEEK:2.04e-02
 dcme_5=" \
   V_MODEL_DECOR_FILE_PATH dcme_gd-1e-4_ub_mm \
   V_TRAIN_METHOD dcme \
@@ -163,6 +184,8 @@ dcme_5=" \
   V_MODEL_PROJ_BALL_NORM 1e2 \
   V_MICRO_ME 1"
 
+# 5.59 %   Semantic accuracy: 6.87 %   Syntactic accuracy: 5.18 %
+# PEEK:6.02e-03
 dcme_6=" \
   V_MODEL_DECOR_FILE_PATH dcme_gd-1e-4_nc_ub_mm \
   V_TRAIN_METHOD dcme \
@@ -171,6 +194,8 @@ dcme_6=" \
   V_MODEL_PROJ_BALL_NORM 1e2 \
   V_MICRO_ME 1"
 
+# 17.85 %   Semantic accuracy: 10.09 %   Syntactic accuracy: 20.29 %
+# PEEK:1.95e-02
 dcme_7=" \
   V_MODEL_DECOR_FILE_PATH dcme_gd-1e-4_ub_mm_mmsu \
   V_TRAIN_METHOD dcme \
@@ -179,6 +204,8 @@ dcme_7=" \
   V_MICRO_ME 1 \
   V_MICRO_ME_SCR_UPDATE 1"
 
+# 5.38 %   Semantic accuracy: 6.38 %   Syntactic accuracy: 5.06 %
+# PEEK:6.72e-03
 dcme_8=" \
   V_MODEL_DECOR_FILE_PATH dcme_gd-1e-4_nc_ub_mm_mmsu \
   V_TRAIN_METHOD dcme \
