@@ -19,8 +19,6 @@ void permute() {
   int i, j, k;
   int wids[SUP], wnum;
   // permute sentences in text
-  VariableInit();
-  NumInit();
   // build vocab if necessary, load, and set V by smaller actual size
   if (!fexists(V_VOCAB_FILE_PATH) || V_VOCAB_OVERWRITE) {
     vcb = TextBuildVocab(V_TEXT_FILE_PATH, 1, -1);
@@ -62,4 +60,8 @@ void permute() {
   return;
 }
 
-int main() { permute(); }
+int main(int argc, char** argv) {
+  VariableInit(argc, argv);
+  NumInit();
+  permute();
+}

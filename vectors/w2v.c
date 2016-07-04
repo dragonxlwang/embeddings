@@ -29,15 +29,21 @@ void W2vThreadPrintProgBar(int dbg_lvl, int tid, real p) {
   char *mdis =
       ModelDebugInfoStr(model, p, tid, start_clock_t, V_THREAD_NUM, gd_ss);
 #ifdef DEBUG
+#ifdef DEBUGPEEK
   real avgp = PeekEvalSingleThread(model, ps, C);
   LOGCR(dbg_lvl);
-  LOG(dbg_lvl, "[%s]: ", V_MODEL_DECOR_FILE_PATH);
+  if (V_MODEL_DECOR_FILE_PATH) LOG(dbg_lvl, "[%s]: ", V_MODEL_DECOR_FILE_PATH);
   LOG(dbg_lvl, "%s", mdis);
   LOGC(dbg_lvl, 'c', 'r', " PEEK:%.2e", avgp);
   LOGCR(dbg_lvl);
 #else
+  LOGCR(dbg_lvl);
+  if (V_MODEL_DECOR_FILE_PATH) LOG(dbg_lvl, "[%s]: ", V_MODEL_DECOR_FILE_PATH);
+  LOG(dbg_lvl, "%s", mdis);
+#endif
+#else
   LOGCLR(dbg_lvl);
-  LOG(dbg_lvl, "[%s]: ", V_MODEL_DECOR_FILE_PATH);
+  if (V_MODEL_DECOR_FILE_PATH) LOG(dbg_lvl, "[%s]: ", V_MODEL_DECOR_FILE_PATH);
   LOG(dbg_lvl, "%s", mdis);
 #endif
   free(mdis);

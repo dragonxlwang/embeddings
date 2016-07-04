@@ -222,12 +222,15 @@ int TextNormWord(char* str, int if_lower, int if_rm_trail_punc) {
   return flag;
 }
 
-Vocabulary* TextBuildVocab(char* text_file_path, int if_norm_word,
-                           int cap) {  // cap = -1 if no limit
+Vocabulary* TextBuildVocab(char* text_file_path, int if_norm_word, int cap) {
+  // cap = -1 if no limit
   char str[TEXT_MAX_WORD_LEN];
   int flag = 0;
   Vocabulary* vcb = VocabCreate(TEXT_INIT_VCB_CAP);
   FILE* fin = fopen(text_file_path, "rb");
+  fseek(fin, 0, SEEK_END);
+  long int fsz = ftell(fin);
+  fseek(fin, 0, SEEK_SET);
   TEXT_CORPUS_WORD_CNT = 0;
   if (!fin) {
     LOG(0, "[error]: cannot find file %s\n", text_file_path);
@@ -240,8 +243,10 @@ Vocabulary* TextBuildVocab(char* text_file_path, int if_norm_word,
       VocabAdd(vcb, str, 1);
       TEXT_CORPUS_WORD_CNT++;
       if ((TEXT_CORPUS_WORD_CNT & 0xFFFFF) == 0xFFFFF)
-        LOG(2, "\33[2K\r[TextBuildVocab]: reading %lld [*2^20 | M] word",
-            TEXT_CORPUS_WORD_CNT >> 20);
+        LOG(2,
+            "\33[2K\r[TextBuildVocab]: reading %lld [*2^20 | M] word"
+            " complete %.2lf%%",
+            TEXT_CORPUS_WORD_CNT >> 20, ftell(fin) / ((double)fsz));
     }
     if (flag == 2) break;
   }

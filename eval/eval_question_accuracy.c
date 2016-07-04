@@ -8,6 +8,35 @@
 
 char* EV_QUESTION_FILE_PATH = "~/data/w2v/questions-words.txt";
 
+real EvalScoreOneQuestion(real* e, heap* h, real* p, int V, int b1, int b2,
+                          int b3, int b4) {
+  real vec[NUP];
+  int c, method = 2;
+#ifdef ACCURACY
+  method = 1;
+#endif
+  HeapEmpty(h);
+  NumAddCVecDVec(e + b2 * N, e + b1 * N, 1, -1, N, vec);
+  NumVecAddCVec(vec, e + b3 * N, 1, N);
+  if (method == 1) {
+    for (c = 0; c < V; c++) {
+      if (c == b1 || c == b2 || c == b3) continue;
+      HeapPush(h, c, NumVecDot(vec, e + c * N, N));
+    }
+    for (c = 0; c < h->size; c++)
+      if (h->d[c].key == b4) break;
+    if (c != h->size)
+      return 1;
+    else
+      return 0;
+  } else if (method == 2) {
+    for (c = 0; c < V; c++) p[c] = NumVecDot(vec, e + c * N, N);
+    NumSoftMax(p, 1, V);
+    return p[b4];
+  }
+  return 0;
+}
+
 void EvalQuestionAccuracy(real* e, Vocabulary* vcb, int V) {
   EV_QUESTION_FILE_PATH = FilePathExpand(EV_QUESTION_FILE_PATH);
   char st1[WUP], st2[WUP], st3[WUP], st4[WUP];
@@ -15,18 +44,20 @@ void EvalQuestionAccuracy(real* e, Vocabulary* vcb, int V) {
   FILE* fin = fopen(EV_QUESTION_FILE_PATH, "rb");
   int TOPCNT = 1;  // top count: 10
   int TCN = 0;     // group count
-  int CCN = 0;     // group correct
+  real CCN = 0;    // group correct
   int QID = 0;     // group id
-  int CACN = 0;    // total correct
+  real CACN = 0;   // total correct
   int TACN = 0;    // total count
-  int SEAC = 0;    // semantic correct
+  real SEAC = 0;   // semantic correct
   int SECN = 0;    // semantic count
-  int SYAC = 0;    // syntactic correct
+  real SYAC = 0;   // syntactic correct
   int SYCN = 0;    // syntactic count
   int TQ = 0;      // total question count
   int TQS = 0;     // questions  passed unk test
   int a, b1, b2, b3, b4, c;
+  real score;
   heap* h = HeapCreate(TOPCNT);
+  real* p = NumNewHugeVec(V);
   real len;
   real max_len = 0, sum_len = 0;
   printf("\n");
@@ -38,20 +69,19 @@ void EvalQuestionAccuracy(real* e, Vocabulary* vcb, int V) {
   }
   printf("\nsum_len=%lf, max_len=%lf\n", sum_len, max_len);
   while (1) {
-    HeapEmpty(h);
     fscanf(fin, "%s", st1);
     for (a = 0; a < strlen(st1); a++) st1[a] = LOWER(st1[a]);
     if ((!strcmp(st1, ":")) || (!strcmp(st1, "EXIT")) || feof(fin)) {
       if (TCN == 0) TCN = 1;
       if (QID != 0) {
-        printf("ACCURACY TOP%d: %.2f %%  (%d / %d)\n", TOPCNT,
-               CCN / (float)TCN * 100, CCN, TCN);
+        printf("ACCURACY TOP%d: %lf %%  (%lf / %d)\n", TOPCNT,
+               CCN / (double)TCN * 100, (double)CCN, TCN);
         printf(
-            "Total accuracy: %.2f %%   "
-            "Semantic accuracy: %.2f %%   "
-            "Syntactic accuracy: %.2f %% \n",
-            CACN / (float)TACN * 100, SEAC / (float)SECN * 100,
-            SYAC / (float)SYCN * 100);
+            "Total accuracy: %lf %%   "
+            "Semantic accuracy: %lf %%   "
+            "Syntactic accuracy: %lf %% \n",
+            CACN / (double)TACN * 100, SEAC / (double)SECN * 100,
+            SYAC / (double)SYCN * 100);
       }
       QID++;
       fscanf(fin, "%s", st1);
@@ -76,21 +106,14 @@ void EvalQuestionAccuracy(real* e, Vocabulary* vcb, int V) {
     if (b1 == -1 || b2 == -1 || b3 == -1 || b4 == -1) continue;  // UNK
     if (b1 >= V || b2 >= V || b3 >= V || b4 >= V) continue;      // exceed V
     TQS++;
-    NumAddCVecDVec(e + b2 * N, e + b1 * N, 1, -1, N, vec);
-    NumVecAddCVec(vec, e + b3 * N, 1, N);
-    for (c = 0; c < V; c++) {
-      if (c == b1 || c == b2 || c == b3) continue;
-      HeapPush(h, c, NumVecDot(vec, e + c * N, N));
-    }
-    for (c = 0; c < h->size; c++)
-      if (h->d[c].key == b4) break;
-    if (c != h->size) {  // correct
-      CCN++;
-      CACN++;
+    score = EvalScoreOneQuestion(e, h, p, V, b1, b2, b3, b4);
+    if (score > 0) {  // correct
+      CCN += score;
+      CACN += score;
       if (QID <= 5)
-        SEAC++;
+        SEAC += score;
       else
-        SYAC++;
+        SYAC += score;
     } else {  // wrong
       /* printf("%s:%s vs %s:%s ", st1, st2, st3, st4); */
       /* for (c = 0; c < h->size; c++) */

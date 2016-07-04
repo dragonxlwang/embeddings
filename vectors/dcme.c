@@ -40,10 +40,11 @@ void DcmeThreadPrintProgBar(int dbg_lvl, int tid, real p, DcmeBookkeeping* b) {
   if (sid_dcme_ppb_lock) return;
   sid_dcme_ppb_lock = 1;
 #ifdef DEBUG
-  if (NumRand() > 0.1) {
+  if (NumRand() > 0.01) {
     sid_dcme_ppb_lock = 0;
     return;
   }
+#ifdef DEBUGPEEK
   char* mdis =
       ModelDebugInfoStr(model, p, tid, start_clock_t, V_THREAD_NUM, gd_ss);
   char* ddis = malloc(0x1000);
@@ -74,6 +75,14 @@ void DcmeThreadPrintProgBar(int dbg_lvl, int tid, real p, DcmeBookkeeping* b) {
   LOGCR(dbg_lvl);
   free(mdis);
   free(ddis);
+#else
+  char* mdis =
+      ModelDebugInfoStr(model, p, tid, start_clock_t, V_THREAD_NUM, gd_ss);
+  LOGCR(dbg_lvl);
+  if (V_MODEL_DECOR_FILE_PATH) LOG(dbg_lvl, "[%s]: ", V_MODEL_DECOR_FILE_PATH);
+  LOG(dbg_lvl, "%s", mdis);
+  free(mdis);
+#endif /* ifdef DEBUGPEEK */
 #else
   char* mdis =
       ModelDebugInfoStr(model, p, tid, start_clock_t, V_THREAD_NUM, gd_ss);
@@ -133,10 +142,12 @@ void DcmeDualUpdate(int zz, DcmeBookkeeping* b, heap* twh) {
   int j, k;
   NumMulMatVec(model->tar, b->hh + zz * N, V, N, b->dd + zz * V);  // dd
   b->ent[zz] = NumSoftMax(b->dd + zz * V, b->hn[zz], V);           // ent (sm)
-  HeapEmpty(twh);                                                  // tw reset
-  for (j = 0; j < V; j++) HeapPush(twh, j, b->dd[zz * V + j]);     // tw add
-  for (j = 0; j < Q; j++) b->tw[zz * Q + j] = twh->d[j].key;       // tw load
-  qsort(b->tw + zz * Q, Q, sizeof(int), cmp_int);                  // tw sort
+  if (Q > 0) {
+    HeapEmpty(twh);                                               // tw reset
+    for (j = 0; j < V; j++) HeapPush(twh, j, b->dd[zz * V + j]);  // tw add
+    for (j = 0; j < Q; j++) b->tw[zz * Q + j] = twh->d[j].key;    // tw load
+    qsort(b->tw + zz * Q, Q, sizeof(int), cmp_int);               // tw sort
+  }
   if (V_MICRO_ME) {
     NumFillZeroVec(b->ow + zz * N, N);
     NumFillZeroVec(b->ww + zz * N, N);

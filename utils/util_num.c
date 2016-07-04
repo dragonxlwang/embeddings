@@ -102,6 +102,7 @@ void NumPrintAllArr(real *arr, int l) {
   fflush(stdout);
   return;
 }
+
 void NumPrintMatrix(char *name, real *arr, int m, int n) {
   int i;
   int abbrv = 0;
@@ -161,13 +162,13 @@ int *NumNewHugeIntVec(long long elem_num) {
   return ptr;
 }
 
-real *NumCLoneHugeVec(real *vec, long long elem_num) {
+real *NumCloneHugeVec(real *vec, long long elem_num) {
   real *ptr = NumNewHugeVec(elem_num);
   memcpy(ptr, vec, elem_num * sizeof(real));
   return ptr;
 }
 
-int *NumCLoneHugeIntVec(int *vec, long long elem_num) {
+int *NumCloneHugeIntVec(int *vec, long long elem_num) {
   int *ptr = NumNewHugeIntVec(elem_num);
   memcpy(ptr, vec, elem_num * sizeof(int));
   return ptr;
