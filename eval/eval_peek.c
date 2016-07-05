@@ -18,11 +18,13 @@ int main(int argc, char** argv) {
   real sample_rate = 1e-4;
   int top_k = 2e5;
   int overwrite = 0;
-  char* file_path =
-      FilePathSubExtension(V_TEXT_FILE_PATH, sformat("%.2e.lok", sample_rate));
+  char* file_path = FilePathSubExtension(
+      V_TEXT_FILE_PATH, sformat("l%dr%ds%.2e.lok", V_TEXT_LOWER,
+                                V_TEXT_RM_TRAIL_PUNC, sample_rate));
   PeekSet* p;
   if (!fexists(file_path) || overwrite) {
-    p = PeekBuild(V_TEXT_FILE_PATH, sample_rate, top_k, vcb, V_THREAD_NUM);
+    p = PeekBuild(V_TEXT_FILE_PATH, V_TEXT_LOWER, V_TEXT_RM_TRAIL_PUNC,
+                  sample_rate, top_k, vcb, V_THREAD_NUM);
     PeekSave(file_path, vcb, p);
     PeekSetFree(p);
   }

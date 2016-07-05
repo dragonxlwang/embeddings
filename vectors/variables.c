@@ -150,7 +150,8 @@ void VariableInit(int argc, char **argv) {
   if (i != -1) V_PEEK_FILE_PATH = sclone(argv[i + 1]);
   if (!V_PEEK_FILE_PATH)
     V_PEEK_FILE_PATH = FilePathSubExtension(
-        V_TEXT_FILE_PATH, sformat("%.2e.pek", V_PEEK_SAMPLE_RATE));
+        V_TEXT_FILE_PATH, sformat("l%dr%ds%.2e.pek", V_TEXT_LOWER,
+                                  V_TEXT_RM_TRAIL_PUNC, V_PEEK_SAMPLE_RATE));
   else
     V_PEEK_FILE_PATH = FilePathExpand(V_PEEK_FILE_PATH);
   LOGC(1, c, 'k', "Peek File --------------------------------------- : %s\n",

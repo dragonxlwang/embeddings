@@ -247,7 +247,7 @@ Vocabulary* TextBuildVocab(char* text_file_path, int if_lower,
         LOG(2,
             "\33[2K\r[TextBuildVocab]: reading %lld [*2^20 | M] word"
             " complete %.2lf%%",
-            TEXT_CORPUS_WORD_CNT >> 20, ftell(fin) / ((double)fsz));
+            TEXT_CORPUS_WORD_CNT >> 20,  100.0 * ftell(fin) / ((double)fsz));
     }
     if (flag == 2) break;
   }
