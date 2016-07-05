@@ -6,7 +6,6 @@
 #include "../utils/util_num.c"
 #include "../utils/util_text.c"
 #include "../vectors/variables.c"
-#include "eval_load_model.c"
 
 Vocabulary* vcb;
 
@@ -58,10 +57,8 @@ void EvalParaphrase() {
   return;
 }
 
-int main() {
-  VariableInit();
+int main(int argc, char** argv) {
+  VariableInit(argc, argv);
   NumInit();
-  /* W2vModelLoad(); */
-  ModelLoad();
   EvalParaphrase();
 }
