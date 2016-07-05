@@ -225,13 +225,13 @@ PeekSet *PeekBuild(char *text_file_path, int if_lower, int if_rm_trail_punc,
   PeekSet *tps;
   ps->size = 0;
   for (i = 0; i < thread_num; i++) {
-    tps = (PeekSet *)(parameters[i * stride + 8]);
+    tps = (PeekSet *)(parameters[(i + 1) * stride - 1]);
     ps->size += tps->size;
   }
   ps->wids = (int **)malloc(ps->size * sizeof(int *));
   ps->wnum = (int *)malloc(ps->size * sizeof(int));
   for (i = 0; i < thread_num; i++) {
-    tps = (PeekSet *)(parameters[i * stride + 8]);
+    tps = (PeekSet *)(parameters[(i + 1) * stride - 1]);
     for (j = 0; j < tps->size; j++) {
       ps->wids[k] = NumCloneIntVec(tps->wids[j], tps->wnum[j]);
       ps->wnum[k] = tps->wnum[j];

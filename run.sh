@@ -1,5 +1,5 @@
 if [[ $3 != "nomake"  || $1 == "make" ]]; then
-  make vectors/train NOEXEC=1 CFLAGS="-DDEBUG"
+  make vectors/train NOEXEC=1 # CFLAGS="-DDEBUG"
   make eval/eval_peek NOEXEC=1
   make eval/eval_word_distance NOEXEC=1
   make eval/eval_question_accuracy NOEXEC=1 # CFLAGS="-DACCURACY"

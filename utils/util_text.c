@@ -245,17 +245,20 @@ Vocabulary* TextBuildVocab(char* text_file_path, int if_lower,
       TEXT_CORPUS_WORD_CNT++;
       if ((TEXT_CORPUS_WORD_CNT & 0xFFFFF) == 0xFFFFF)
         LOG(2,
-            "\33[2K\r[TextBuildVocab]: reading %lld [*2^20 | M] word"
-            " complete %.2lf%%",
-            TEXT_CORPUS_WORD_CNT >> 20,  100.0 * ftell(fin) / ((double)fsz));
+            "\33[2K\r[TextBuildVocab]: reading %lld (*2^20 | M) word, "
+            "vocabulary size %d, "
+            "complete %.2lf%%",
+            TEXT_CORPUS_WORD_CNT >> 20, vcb->size,
+            100.0 * ftell(fin) / ((double)fsz));
     }
     if (flag == 2) break;
   }
-  LOG(1, "[TextBuildVocab]: reading %lld [*2^20 | M] word\n",
+  LOG(1, "[TextBuildVocab]: reading %lld (*2^20 | M) word\n",
       TEXT_CORPUS_WORD_CNT >> 20);
   TEXT_CORPUS_FILE_SIZE = ftell(fin);
-  LOG(1, "[TextBuildVocab]: file size %lld [*2^20 | M]\n",
+  LOG(1, "[TextBuildVocab]: file size %lld (*2^20 | M)\n",
       TEXT_CORPUS_FILE_SIZE >> 20);
+  LOG(1, "[TextBuildVocab]: vocabulary size %d\n", vcb->size);
   fclose(fin);
   VocabReduce(vcb, cap);
   return vcb;
