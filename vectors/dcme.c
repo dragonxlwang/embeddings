@@ -325,7 +325,7 @@ void* DcmeThreadTrain(void* arg) {
   }
   fseek(fin, fbeg, SEEK_SET);  // training
   while (iter_num < V_ITER_NUM) {
-    wnum = TextReadSent(fin, vcb, wids, 1, 1);
+    wnum = TextReadSent(fin, vcb, wids, V_TEXT_LOWER, V_TEXT_RM_TRAIL_PUNC, 1);
     fpos = ftell(fin);
     if (wnum > 1 && DcmeUpdate(wids, wnum, b, twh)) {
       progress[tid] = iter_num + (double)(fpos - fbeg) / (fend - fbeg);  // prog

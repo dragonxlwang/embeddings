@@ -167,7 +167,7 @@ void *W2vThreadTrain(void *arg) {
   int iter_num = 0;
   fseek(fin, fbeg, SEEK_SET);  // training
   while (iter_num < V_ITER_NUM) {
-    wnum = TextReadSent(fin, vcb, wids, 1, 1);
+    wnum = TextReadSent(fin, vcb, wids, V_TEXT_LOWER, V_TEXT_RM_TRAIL_PUNC, 1);
     fpos = ftell(fin);
     if (wnum > 1) W2vUpdate(wids, wnum, &rs);
     if (i++ >= 100000) {

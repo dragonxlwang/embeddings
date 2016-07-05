@@ -109,7 +109,8 @@ PeekSet *PeekLoad(char *fp, Vocabulary *vcb) {
 }
 
 int sid_peek_pb_lock = 0;
-PeekSet *sid_peek_build(char *text_file_path, long int fbeg, long int fend,
+PeekSet *sid_peek_build(char *text_file_path, int if_lower,
+                        int if_rm_trail_punc, long int fbeg, long int fend,
                         real sample_rate, int peek_top_k, Vocabulary *vcb,
                         long int *fpass, int *size) {
   int i;
@@ -138,7 +139,7 @@ PeekSet *sid_peek_build(char *text_file_path, long int fbeg, long int fend,
   long int fpos1, fpos2;
   while (!feof(fin) && (fend < 0 || ftell(fin) < fend)) {
     fpos1 = ftell(fin);
-    wnum = TextReadSent(fin, vcb, wids, 1, 1);
+    wnum = TextReadSent(fin, vcb, wids, if_lower, if_rm_trail_punc, 1);
     fpos2 = ftell(fin);
     *fpass += fpos2 - fpos1;
     if (sid++ > 100 && NumRand() < sample_rate && wnum >= 5) {
@@ -169,6 +170,8 @@ void *sid_peek_build_thread(void *param) {
   void **p = (void **)param;
   int i = 0;
   char *text_file_path = p[i++];
+  int if_lower = *((int *)p[i++]);
+  int if_rm_trail_punc = *((int *)p[i++]);
   long int fbeg = *((long int *)p[i++]);
   long int fend = *((long int *)p[i++]);
   real sample_rate = *((real *)p[i++]);
@@ -176,21 +179,22 @@ void *sid_peek_build_thread(void *param) {
   Vocabulary *vcb = p[i++];
   long int *fpass = p[i++];
   int *size = p[i++];
-  PeekSet *ps = sid_peek_build(text_file_path, fbeg, fend, sample_rate,
-                               peek_top_k, vcb, fpass, size);
+  PeekSet *ps = sid_peek_build(text_file_path, if_lower, if_rm_trail_punc, fbeg,
+                               fend, sample_rate, peek_top_k, vcb, fpass, size);
   p[i++] = ps;
   return NULL;
 }
 
-PeekSet *PeekBuild(char *text_file_path, real sample_rate, int peek_top_k,
-                   Vocabulary *vcb, int thread_num) {
+PeekSet *PeekBuild(char *text_file_path, int if_lower, int if_rm_trail_punc,
+                   real sample_rate, int peek_top_k, Vocabulary *vcb,
+                   int thread_num) {
   if (peek_top_k >= vcb->size) {
     LOG(0, "[error]: peek top_k must be smaller than vocabulary size\n");
     exit(1);
   }
   // sample by sample_rate amount of sentences
   long int fsz = FileSize(text_file_path);
-  int size = 0, stride = 9, i, j, k = 0;
+  int size = 0, stride = 11, i, j, k = 0;
   long int fpass = 0;
   void **parameters = (void **)malloc(thread_num * stride * sizeof(void *));
   long int *fbeg = (long int *)malloc(thread_num * sizeof(long int));
@@ -200,6 +204,8 @@ PeekSet *PeekBuild(char *text_file_path, real sample_rate, int peek_top_k,
     fbeg[i] = ((real)fsz) / thread_num * i;
     fend[i] = ((real)fsz) / thread_num * (i + 1);
     parameters[i * stride + j++] = text_file_path;
+    parameters[i * stride + j++] = &if_lower;
+    parameters[i * stride + j++] = &if_rm_trail_punc;
     parameters[i * stride + j++] = fbeg + i;
     parameters[i * stride + j++] = fend + i;
     parameters[i * stride + j++] = &sample_rate;

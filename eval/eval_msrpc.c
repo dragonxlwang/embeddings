@@ -39,8 +39,8 @@ void EvalParaphrase() {
       printf("error!");
       exit(1);
     }
-    len1 = TextReadSent(fin, vcb, sent1, 1, 1);
-    len2 = TextReadSent(fin, vcb, sent2, 1, 1);
+    len1 = TextReadSent(fin, vcb, sent1, V_TEXT_LOWER, V_TEXT_RM_TRAIL_PUNC, 1);
+    len2 = TextReadSent(fin, vcb, sent2, V_TEXT_LOWER, V_TEXT_RM_TRAIL_PUNC, 1);
     GetSentEmbd(sent1, len1, embd1);
     GetSentEmbd(sent2, len2, embd2);
     c = NumVecCos(embd1, embd2, N);

@@ -18,15 +18,6 @@ int cap = 0xFFFFF;
 void permute() {
   int i, j, k;
   int wids[SUP], wnum;
-  // permute sentences in text
-  // build vocab if necessary, load, and set V by smaller actual size
-  if (!fexists(V_VOCAB_FILE_PATH) || V_VOCAB_OVERWRITE) {
-    vcb = TextBuildVocab(V_TEXT_FILE_PATH, 1, -1);
-    TextSaveVocab(V_VOCAB_FILE_PATH, vcb);
-  }
-  vcb = TextLoadVocab(V_VOCAB_FILE_PATH, V, V_VOCAB_HIGH_FREQ_CUTOFF);
-  V = vcb->size;
-  LOG(1, "Actual V: %d\n", V);
   FILE* fin = fopen(V_TEXT_FILE_PATH, "rb");
   if (!fin) {
     LOG(0, "Error!\n");
@@ -35,7 +26,7 @@ void permute() {
   lwids = (int**)malloc(cap * sizeof(int*));
   lwnum = (int*)malloc(cap * sizeof(int));
   while (!feof(fin)) {
-    wnum = TextReadSent(fin, vcb, wids, 1, 1);
+    wnum = TextReadSent(fin, vcb, wids, V_TEXT_LOWER, V_TEXT_RM_TRAIL_PUNC, 1);
     lwids[num] = NumCloneIntVec(wids, wnum);
     lwnum[num] = wnum;
     num++;

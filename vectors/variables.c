@@ -31,6 +31,10 @@ real V_L2_REGULARIZATION_WEIGHT = -1;  // 1e-3;
 real V_MODEL_PROJ_BALL_NORM = -1;
 // Vocab loading option: cut-off high frequent (stop) words
 int V_VOCAB_HIGH_FREQ_CUTOFF = 80;
+// if convert uppercase to lowercase
+int V_TEXT_LOWER = 1;
+// if remove trailing punctuation
+int V_TEXT_RM_TRAIL_PUNC = 1;
 // if cache model per iteration
 int V_CACHE_INTERMEDIATE_MODEL = 0;
 // if overwrite vocab file
@@ -105,11 +109,19 @@ void VariableInit(int argc, char **argv) {
   LOGC(1, c, 'k', "Input File -------------------------------------- : %s\n",
        V_TEXT_FILE_PATH);
 
-  i = getoptpos("V_VOCAB_FILE_PATH", argc, argv);
+  i = getoptpos("V_TEXT_LOWER", argc, argv);
   c = (i == -1) ? 'w' : 'r';
+  if (i != -1) V_TEXT_LOWER = atoi(argv[i + 1]);
+  i = getoptpos("V_TEXT_RM_TRAIL_PUNC", argc, argv);
+  if (c == 'w') c = (i == -1) ? 'w' : 'r';
+  if (i != -1) V_TEXT_RM_TRAIL_PUNC = atoi(argv[i + 1]);
+  i = getoptpos("V_VOCAB_FILE_PATH", argc, argv);
+  if (c == 'w') c = (i == -1) ? 'w' : 'r';
   if (i != -1) V_VOCAB_FILE_PATH = sclone(argv[i + 1]);
   if (!V_VOCAB_FILE_PATH)
-    V_VOCAB_FILE_PATH = FilePathSubExtension(V_TEXT_FILE_PATH, "vcb");
+    V_VOCAB_FILE_PATH = FilePathSubExtension(
+        V_TEXT_FILE_PATH,
+        sformat("l%dr%d.vcb", V_TEXT_LOWER, V_TEXT_RM_TRAIL_PUNC));
   else
     V_VOCAB_FILE_PATH = FilePathExpand(V_VOCAB_FILE_PATH);
   LOGC(1, c, 'k', "Vocab File -------------------------------------- : %s\n",
@@ -179,6 +191,18 @@ void VariableInit(int argc, char **argv) {
   if (i != -1) V_VOCAB_HIGH_FREQ_CUTOFF = atoi(argv[i + 1]);
   LOGC(1, c, 'k', "Vocabulary high-freq words cut-off -------------- : %d\n",
        V_VOCAB_HIGH_FREQ_CUTOFF);
+
+  i = getoptpos("V_TEXT_LOWER", argc, argv);
+  c = (i == -1) ? 'w' : 'r';
+  if (i != -1) V_TEXT_LOWER = atoi(argv[i + 1]);
+  LOGC(1, c, 'k', "Convert uppercase to lowercase letters ---------- : %d\n",
+       V_TEXT_LOWER);
+
+  i = getoptpos("V_TEXT_RM_TRAIL_PUNC", argc, argv);
+  c = (i == -1) ? 'w' : 'r';
+  if (i != -1) V_TEXT_RM_TRAIL_PUNC = atoi(argv[i + 1]);
+  LOGC(1, c, 'k', "Remove trailing punctuation --------------------- : %d\n",
+       V_TEXT_RM_TRAIL_PUNC);
 
   i = getoptpos("V_CACHE_INTERMEDIATE_MODEL", argc, argv);
   c = (i == -1) ? 'w' : 'r';
@@ -340,7 +364,8 @@ void VariableInit(int argc, char **argv) {
 
   // build vocab if necessary, load, and set V by smaller actual size
   if (!fexists(V_VOCAB_FILE_PATH) || V_VOCAB_OVERWRITE) {
-    vcb = TextBuildVocab(V_TEXT_FILE_PATH, 1, -1);
+    vcb = TextBuildVocab(V_TEXT_FILE_PATH, V_TEXT_LOWER, V_TEXT_RM_TRAIL_PUNC,
+                         -1);
     TextSaveVocab(V_VOCAB_FILE_PATH, vcb);
     VocabFree(vcb);
   }
@@ -354,8 +379,8 @@ void VariableInit(int argc, char **argv) {
 #ifdef DEBUG
   // build peek set if necessary, and load
   if (!fexists(V_PEEK_FILE_PATH) || V_PEEK_OVERWRITE) {
-    ps = PeekBuild(V_TEXT_FILE_PATH, V_PEEK_SAMPLE_RATE, V_PEEK_TOP_K, vcb,
-                   V_THREAD_NUM);
+    ps = PeekBuild(V_TEXT_FILE_PATH, V_TEXT_LOWER, V_TEXT_RM_TRAIL_PUNC,
+                   V_PEEK_SAMPLE_RATE, V_PEEK_TOP_K, vcb, V_THREAD_NUM);
     PeekSave(V_PEEK_FILE_PATH, vcb, ps);
     PeekSetFree(ps);
   }

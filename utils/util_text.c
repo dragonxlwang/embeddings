@@ -222,7 +222,8 @@ int TextNormWord(char* str, int if_lower, int if_rm_trail_punc) {
   return flag;
 }
 
-Vocabulary* TextBuildVocab(char* text_file_path, int if_norm_word, int cap) {
+Vocabulary* TextBuildVocab(char* text_file_path, int if_lower,
+                           int if_rm_trail_punc, int cap) {
   // cap = -1 if no limit
   char str[TEXT_MAX_WORD_LEN];
   int flag = 0;
@@ -238,7 +239,7 @@ Vocabulary* TextBuildVocab(char* text_file_path, int if_norm_word, int cap) {
   }
   while (1) {
     flag = TextReadWord(fin, str);
-    if (if_norm_word) TextNormWord(str, 1, 1);
+    TextNormWord(str, if_lower, if_rm_trail_punc);
     if (str[0] != '\0') {  // filter 0-length string
       VocabAdd(vcb, str, 1);
       TEXT_CORPUS_WORD_CNT++;
@@ -299,8 +300,8 @@ Vocabulary* TextLoadVocab(char* vcb_fp, int cap, int high_freq_cutoff) {
   return vcb;
 }
 
-int TextReadSent(FILE* fin, Vocabulary* vcb, int* word_ids, int if_norm_word,
-                 int till_line_end) {
+int TextReadSent(FILE* fin, Vocabulary* vcb, int* word_ids, int if_lower,
+                 int if_rm_trail_punc, int till_line_end) {
   // if till_line_end = 1, each line is one sentence
   // else, line is delimited by punctuation (newline alone won't stop reading)
   // EOF info is not exposed to caller function
@@ -309,7 +310,7 @@ int TextReadSent(FILE* fin, Vocabulary* vcb, int* word_ids, int if_norm_word,
   int word_num = 0;
   while (flag1 != 2) {
     flag1 = TextReadWord(fin, str);
-    if (if_norm_word) flag2 = TextNormWord(str, 1, 1);
+    flag2 = TextNormWord(str, if_lower, if_rm_trail_punc);
     if (str[0] == '\0')
       id = -1;  // empty string
     else
