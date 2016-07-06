@@ -34,15 +34,15 @@ real NumExp(real x) {
 }
 
 real NumRandNext(unsigned long long *seed) {
-  *seed = (((*seed) * 0x5DEECE66DL + 0x0A) & 0xFFFFFFFFFFFFL);
-  return ((real)(*seed) / ((real)0xFFFFFFFFFFFFL));
+  *seed = (((*seed) * 0x5DEECE66DL + 0xBL) & 0xFFFFFFFFFFFFL);
+  return ((real)((*seed) >> 16) / ((real)0xFFFFFFFFL));
 }
 
 unsigned long long RANDOM_SEED = 0x0F0F0F0FL;
 real NumRand() {
   // return a random number range from [0, 1)
-  RANDOM_SEED = ((RANDOM_SEED * 0x5DEECE66DL + 0x0A) & 0xFFFFFFFFFFFFL);
-  return ((real)RANDOM_SEED / ((real)0xFFFFFFFFFFFFL));
+  RANDOM_SEED = ((RANDOM_SEED * 0x5DEECE66DL + 0xBL) & 0xFFFFFFFFFFFFL);
+  return ((real)(RANDOM_SEED >> 16) / ((real)0xFFFFFFFFL));
 }
 
 void NumRandFillVec(real *arr, int l, real lb, real ub) {
