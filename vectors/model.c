@@ -28,8 +28,22 @@ Model *ModelCreate(int v, int n, real init_amp) {
   model->n = n;
   if (init_amp >= 0) {
     NumRandFillVec(model->scr, v * n, -init_amp, init_amp);
-    NumRandFillVec(model->tar, v * n, -init_amp, init_amp);
+    // instead of using random inititalization for model->tar,
+    // set all values to 0 the same as word2vec
+    /* NumRandFillVec(model->tar, v * n, -init_amp, init_amp); */
+    NumFillZeroVec(model->tar, v * n);
   }
+  real scr = NumVecNorm(model->scr, model->v * model->n);
+  real ss = NumMatMaxRowNorm(model->scr, model->v, model->n);
+  real tar = NumVecNorm(model->tar, model->v * model->n);
+  real tt = NumMatMaxRowNorm(model->tar, model->v, model->n);
+  LOG(2, "[Model]: ");                      // scr
+  LOG(2, "SCR:%.2e=%.2e*", scr, scr / ss);  // scr
+  LOGC(0, 'r', 'k', "%.2e", ss);            // ss
+  LOG(2, " ");                              //
+  LOG(2, "TAR=%.2e=%.2e*", tar, tar / tt);  // tar
+  LOGC(2, 'r', 'k', "%.2e", tt);            // tt
+  LOGCR(2);
   return model;
 }
 
