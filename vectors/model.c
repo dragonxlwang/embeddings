@@ -37,7 +37,7 @@ Model *ModelCreate(int v, int n, real init_amp) {
   real ss = NumMatMaxRowNorm(model->scr, model->v, model->n);
   real tar = NumVecNorm(model->tar, model->v * model->n);
   real tt = NumMatMaxRowNorm(model->tar, model->v, model->n);
-  LOG(2, "[Model]: ");                      // scr
+  LOG(2, "[Model]: Init ");                 // scr
   LOG(2, "SCR:%.2e=%.2e*", scr, scr / ss);  // scr
   LOGC(0, 'r', 'k', "%.2e", ss);            // ss
   LOG(2, " ");                              //
