@@ -27,7 +27,7 @@ void W2vThreadPrintProgBar(int dbg_lvl, int tid, real p) {
   if (sid_w2v_ppb_lock) return;
   sid_w2v_ppb_lock = 1;
 #ifdef DEBUG
-  if (NumRand() > 0.01) {
+  if (NumRand() > 0.002) {
     sid_w2v_ppb_lock = 0;
     return;
   }
@@ -38,21 +38,23 @@ void W2vThreadPrintProgBar(int dbg_lvl, int tid, real p) {
   LOGCR(dbg_lvl);
   if (V_MODEL_DECOR_FILE_PATH) LOG(dbg_lvl, "[%s]: ", V_MODEL_DECOR_FILE_PATH);
   LOG(dbg_lvl, "%s", mdis);
-  LOGC(dbg_lvl, 'c', 'r', " PEEK:%.2e", avgp);
+  LOG(dbg_lvl, " ");
+  LOGC(dbg_lvl, 'c', 'r', "PEEK:%.2e", avgp);
   LOGCR(dbg_lvl);
 #else
   LOGCR(dbg_lvl);
   if (V_MODEL_DECOR_FILE_PATH) LOG(dbg_lvl, "[%s]: ", V_MODEL_DECOR_FILE_PATH);
   LOG(dbg_lvl, "%s", mdis);
 #endif
+  free(mdis);
 #else
   char *mdis =
       ModelDebugInfoStr(model, p, tid, start_clock_t, V_THREAD_NUM, gd_ss);
   LOGCLR(dbg_lvl);
   if (V_MODEL_DECOR_FILE_PATH) LOG(dbg_lvl, "[%s]: ", V_MODEL_DECOR_FILE_PATH);
   LOG(dbg_lvl, "%s", mdis);
-#endif
   free(mdis);
+#endif
   sid_w2v_ppb_lock = 0;
   return;
 }

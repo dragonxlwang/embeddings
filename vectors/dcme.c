@@ -29,11 +29,32 @@ typedef struct DcmeBookkeeping {  // each thread worker maintains a bookkeeping
   real* twps;                     // list(K): top words probability sum
   real* ow;                       // list(K):vector(N)
 } DcmeBookkeeping;
+int dcme_dual_update_total_cnt = 0;
+int dcme_dual_update_cnt[KUP] = {0};
 
-#ifdef DEBUG
-int sid_dcme_dual_update_cnt = 0;
-int sid_dcme_dual_update_cluster_cnt[1000] = {0};
-#endif
+char* DcmeDualModelDebugInfoStr(DcmeBookkeeping* b) {
+  int j, k;
+  char* ddis = malloc(0x1000);
+  real eem = NumVecMean(b->ent, K);
+  real ees = NumVecStd(b->ent, K);
+  real avgp = PeekEvalSingleThread(model, ps, C);
+  pair* dps = sortedi(dcme_dual_update_cnt, K, 1);
+  sprintfc(ddis, 'g', 'k', "ENT:%.2e\u00b1%.2e", eem, ees);
+  saprintf(ddis, " ");
+  saprintfc(ddis, 'c', 'r', "PEEK:%.2e", avgp);
+  saprintf(ddis, "\n");
+  for (j = 0; j < K; j++) {
+    if (j % 10 == 0 && j != 0) saprintf(ddis, "\n");
+    k = dps[j].key;
+    saprintfc(
+        ddis, 'y', 'k', "[%02d]:%.3lf:", k,
+        (double)dcme_dual_update_cnt[k] / (dcme_dual_update_total_cnt + 1));
+    saprintfc(ddis, 'c', 'k', "%.2e", b->ent[k]);
+    saprintf(ddis, " ");
+  }
+  free(dps);
+  return ddis;
+}
 
 int sid_dcme_ppb_lock = 0;
 void DcmeThreadPrintProgBar(int dbg_lvl, int tid, real p, DcmeBookkeeping* b) {
@@ -44,45 +65,23 @@ void DcmeThreadPrintProgBar(int dbg_lvl, int tid, real p, DcmeBookkeeping* b) {
     sid_dcme_ppb_lock = 0;
     return;
   }
-#ifdef DEBUGPEEK
   char* mdis =
       ModelDebugInfoStr(model, p, tid, start_clock_t, V_THREAD_NUM, gd_ss);
-  char* ddis = malloc(0x1000);
-  real eem = NumVecMean(b->ent, K);
-  real ees = NumVecStd(b->ent, K);
-  real avgp = PeekEvalSingleThread(model, ps, C);
-  pair* dps = sortedi(sid_dcme_dual_update_cluster_cnt, K, 1);
-  sprintfc(ddis, 'g', 'k', "ENT:%.2e\u00b1%.2e", eem, ees);
-  saprintf(ddis, " ");
-  saprintfc(ddis, 'c', 'r', "PEEK:%.2e", avgp);
-  saprintf(ddis, "\n");
-  int j, k;
-  for (j = 0; j < K; j++) {
-    if (j % 10 == 0 && j != 0) saprintf(ddis, "\n");
-    k = dps[j].key;
-    saprintfc(ddis, 'y', 'k', "[%02d]:%.3lf:", k,
-              (real)sid_dcme_dual_update_cluster_cnt[k] /
-                  (sid_dcme_dual_update_cnt + 1));
-    saprintfc(ddis, 'c', 'k', "%.2e", b->ent[k]);
-    saprintf(ddis, " ");
-  }
-  free(dps);
+#ifdef DEBUGPEEK
+  char* ddis = DcmeDualModelDebugInfoStr(b);
   LOGCR(dbg_lvl);
   if (V_MODEL_DECOR_FILE_PATH) LOG(dbg_lvl, "[%s]: ", V_MODEL_DECOR_FILE_PATH);
   LOG(dbg_lvl, "%s", mdis);
   LOG(dbg_lvl, " ");
   LOG(dbg_lvl, "%s", ddis);
   LOGCR(dbg_lvl);
-  free(mdis);
   free(ddis);
 #else
-  char* mdis =
-      ModelDebugInfoStr(model, p, tid, start_clock_t, V_THREAD_NUM, gd_ss);
   LOGCR(dbg_lvl);
   if (V_MODEL_DECOR_FILE_PATH) LOG(dbg_lvl, "[%s]: ", V_MODEL_DECOR_FILE_PATH);
   LOG(dbg_lvl, "%s", mdis);
+#endif
   free(mdis);
-#endif /* ifdef DEBUGPEEK */
 #else
   char* mdis =
       ModelDebugInfoStr(model, p, tid, start_clock_t, V_THREAD_NUM, gd_ss);
@@ -292,10 +291,8 @@ int DcmeUpdate(int* ids, int l, DcmeBookkeeping* b, heap* twh) {
         ModelShrink(model, V_L2_REGULARIZATION_WEIGHT);
       DcmeDualUpdate(zz, b, twh);  // dual update based on hh and hn
       DcmeDualReset(zz, b);        // reset hh and hn
-#ifdef DEBUG
-      sid_dcme_dual_update_cnt++;
-      sid_dcme_dual_update_cluster_cnt[zz]++;
-#endif
+      dcme_dual_update_total_cnt++;
+      dcme_dual_update_cnt[zz]++;
     }
   }
   return offline_done;
