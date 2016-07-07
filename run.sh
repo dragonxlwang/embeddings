@@ -1,5 +1,5 @@
 if [[ $3 != "nomake"  || $1 == "make" ]]; then
-  make vectors/train NOEXEC=1 # CFLAGS="-DDEBUG"
+  make vectors/train NOEXEC=1 CFLAGS="-DDEBUG"
   make eval/eval_peek NOEXEC=1
   make eval/eval_word_distance NOEXEC=1
   make eval/eval_question_accuracy NOEXEC=1 # CFLAGS="-DACCURACY"
@@ -323,29 +323,23 @@ dcme_19=" \
   Q 0"
 
 w2v_13=" \
-  V_MODEL_DECOR_FILE_PATH w2v_l0r0_gd-5e-3_ns_wrh_nc \
-  V_TEXT_LOWER 0 \
-  V_TEXT_RM_TRAIL_PUNC 0 \
+  V_MODEL_DECOR_FILE_PATH w2v_gd-5e-2_ns_wrh_nc \
   V_TRAIN_METHOD w2v \
-  V_INIT_GRAD_DESCENT_STEP_SIZE 5e-3 \
+  V_INIT_GRAD_DESCENT_STEP_SIZE 5e-2 \
   V_NCE 0 \
   V_NS_WRH 1 \
   V_VOCAB_HIGH_FREQ_CUTOFF 0"
 
 w2v_14=" \
-  V_MODEL_DECOR_FILE_PATH w2v_l0r0_gd-5e-3_nce_wrh_nc \
-  V_TEXT_LOWER 0 \
-  V_TEXT_RM_TRAIL_PUNC 0 \
+  V_MODEL_DECOR_FILE_PATH w2v_gd-5e-2_nce_wrh_nc \
   V_TRAIN_METHOD w2v \
-  V_INIT_GRAD_DESCENT_STEP_SIZE 5e-3 \
+  V_INIT_GRAD_DESCENT_STEP_SIZE 5e-2 \
   V_NCE 1 \
   V_NS_WRH 1 \
   V_VOCAB_HIGH_FREQ_CUTOFF 0"
 
 w2v_15=" \
-  V_MODEL_DECOR_FILE_PATH w2v_l0r0_gd-1e-2_ns_wrh_nc \
-  V_TEXT_LOWER 0 \
-  V_TEXT_RM_TRAIL_PUNC 0 \
+  V_MODEL_DECOR_FILE_PATH w2v_gd-1e-2_ns_wrh_nc \
   V_TRAIN_METHOD w2v \
   V_INIT_GRAD_DESCENT_STEP_SIZE 1e-2 \
   V_NCE 0 \
@@ -353,21 +347,9 @@ w2v_15=" \
   V_VOCAB_HIGH_FREQ_CUTOFF 0"
 
 w2v_16=" \
-  V_MODEL_DECOR_FILE_PATH w2v_l0r0_gd-1e-2_nce_wrh_nc \
-  V_TEXT_LOWER 0 \
-  V_TEXT_RM_TRAIL_PUNC 0 \
+  V_MODEL_DECOR_FILE_PATH w2v_gd-1e-2_nce_wrh_nc \
   V_TRAIN_METHOD w2v \
   V_INIT_GRAD_DESCENT_STEP_SIZE 1e-2 \
-  V_NCE 1 \
-  V_NS_WRH 1 \
-  V_VOCAB_HIGH_FREQ_CUTOFF 0"
-
-w2v_17=" \
-  V_MODEL_DECOR_FILE_PATH w2v_l0r0_gd-5e-2_nce_wrh_nc \
-  V_TEXT_LOWER 0 \
-  V_TEXT_RM_TRAIL_PUNC 0 \
-  V_TRAIN_METHOD w2v \
-  V_INIT_GRAD_DESCENT_STEP_SIZE 5e-2\
   V_NCE 1 \
   V_NS_WRH 1 \
   V_VOCAB_HIGH_FREQ_CUTOFF 0"
