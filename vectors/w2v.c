@@ -26,9 +26,13 @@ int sid_w2v_ppb_lock = 0;
 void W2vThreadPrintProgBar(int dbg_lvl, int tid, real p) {
   if (sid_w2v_ppb_lock) return;
   sid_w2v_ppb_lock = 1;
+#ifdef DEBUG
+  if (NumRand() > 0.01) {
+    sid_w2v_ppb_lock = 0;
+    return;
+  }
   char *mdis =
       ModelDebugInfoStr(model, p, tid, start_clock_t, V_THREAD_NUM, gd_ss);
-#ifdef DEBUG
 #ifdef DEBUGPEEK
   real avgp = PeekEvalSingleThread(model, ps, C);
   LOGCR(dbg_lvl);
@@ -42,6 +46,8 @@ void W2vThreadPrintProgBar(int dbg_lvl, int tid, real p) {
   LOG(dbg_lvl, "%s", mdis);
 #endif
 #else
+  char *mdis =
+      ModelDebugInfoStr(model, p, tid, start_clock_t, V_THREAD_NUM, gd_ss);
   LOGCLR(dbg_lvl);
   if (V_MODEL_DECOR_FILE_PATH) LOG(dbg_lvl, "[%s]: ", V_MODEL_DECOR_FILE_PATH);
   LOG(dbg_lvl, "%s", mdis);
@@ -170,7 +176,7 @@ void *W2vThreadTrain(void *arg) {
     wnum = TextReadSent(fin, vcb, wids, V_TEXT_LOWER, V_TEXT_RM_TRAIL_PUNC, 1);
     fpos = ftell(fin);
     if (wnum > 1) W2vUpdate(wids, wnum, &rs);
-    if (i++ >= 100000) {
+    if (i++ >= 10000) {
       i = 0;
       progress[tid] = iter_num + (double)(fpos - fbeg) / (fend - fbeg);  // prog
       p = ModelTrainProgress(progress, V_THREAD_NUM, V_ITER_NUM);        //
