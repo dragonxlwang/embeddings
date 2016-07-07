@@ -112,19 +112,19 @@ void W2vUpdate(int *ids, int l, unsigned long long *rs) {
     }                                                      //
     hw[md] = 1.0 / (h0n - 1.0);                            // hw
     NumAddCVecDVec(h0, model->scr + ids[md] * N, hw[md], -hw[md], N, h);  // h
-    NumFillZeroVec(wd + md * N, N);                                       // wd
+    NumFillZeroVec(wd + i * N, N);                                        // wd
     for (j = 0; j <= V_NS_NEG; j++) {
-      k = (j == 0) ? ids[md] : W2vNegSample(rs);
+      k = (j == 0) ? ids[i] : W2vNegSample(rs);
       label = (j == 0) ? 1 : 0;
       if (V_NCE)  // NCE
         f = NumSigmoid(NumVecDot(h, model->tar + k * N, N) -
                        w2v_neg_prob_log[k]);
       else  // NS
         f = NumSigmoid(NumVecDot(h, model->tar + k * N, N));
+      NumVecAddCVec(wd + i * N, model->tar + k * N, label - f, N);
       ModelGradUpdate(model, 1, k, -(label - f) * gd_ss, h);  // up m->tar
       ModelVecRegularize(model, 1, k, V_MODEL_PROJ_BALL_NORM,
                          V_L2_REGULARIZATION_WEIGHT);
-      NumVecAddCVec(wd + i * N, model->tar + k * N, label - f, N);
     }
     lt = i - 2 * window - 1;
     rt = i;
