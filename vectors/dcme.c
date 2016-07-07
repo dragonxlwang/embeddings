@@ -238,6 +238,7 @@ int DcmeUpdate(int* ids, int l, DcmeBookkeeping* b, heap* twh) {
     }                                                      //
     hw[md] = 1.0 / (h0n - 1.0);                            // hw
     NumAddCVecDVec(h0, model->scr + ids[md] * N, hw[md], -hw[md], N, h);  // h
+    ///////////////////////////////////////////////////////////////////////////
     zz = DcmeDualDecode(h, b);                 // dcd z
     NumVecAddCVec(b->hh + zz * N, h, 1.0, N);  // b->hh
     b->hn[zz]++;                               // b->hn
@@ -259,6 +260,7 @@ int DcmeUpdate(int* ids, int l, DcmeBookkeeping* b, heap* twh) {
         ModelVecRegularize(model, 1, ids[i], V_MODEL_PROJ_BALL_NORM, -1);
       }
     }
+    ///////////////////////////////////////////////////////////////////////////
     lt = i - 2 * window - 1;
     rt = i;
     md = i - window;

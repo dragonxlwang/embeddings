@@ -120,7 +120,8 @@ void W2vUpdate(int *ids, int l, unsigned long long *rs) {
     }                                                      //
     hw[md] = 1.0 / (h0n - 1.0);                            // hw
     NumAddCVecDVec(h0, model->scr + ids[md] * N, hw[md], -hw[md], N, h);  // h
-    NumFillZeroVec(wd + i * N, N);                                        // wd
+    ///////////////////////////////////////////////////////////////////////////
+    NumFillZeroVec(wd + i * N, N);  // wd
     for (j = 0; j <= V_NS_NEG; j++) {
       k = (j == 0) ? ids[i] : W2vNegSample(rs);
       label = (j == 0) ? 1 : 0;
@@ -134,6 +135,7 @@ void W2vUpdate(int *ids, int l, unsigned long long *rs) {
       ModelVecRegularize(model, 1, k, V_MODEL_PROJ_BALL_NORM,
                          V_L2_REGULARIZATION_WEIGHT);
     }
+    ///////////////////////////////////////////////////////////////////////////
     lt = i - 2 * window - 1;
     rt = i;
     md = i - window;
