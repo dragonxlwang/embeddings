@@ -61,6 +61,10 @@ int V_MICRO_ME = 0;
 int V_MICRO_ME_SCR_UPDATE = 0;
 // Dual Reset option
 int V_DUAL_RESET_OPT = 1;
+// Dual update with hi not hh
+int V_DUAL_HI = 0;
+// Adjust the WW while online updating
+int V_ADJUST_WW = 0;
 int K = 20;  // number of dual cluster
 int Q = 10;  // Number of top words in online update
 // ----------------------------- W2V specific --------------------------------
@@ -286,8 +290,20 @@ void VariableInit(int argc, char **argv) {
     i = getoptpos("V_DUAL_RESET_OPT", argc, argv);
     c = (i == -1) ? 'w' : 'r';
     if (i != -1) V_DUAL_RESET_OPT = atoi(argv[i + 1]);
-    LOGC(1, c, 'k', "Dual Reset Option ------------------------------- : %d\n",
+    LOGC(1, c, 'k', "Dual reset option ------------------------------- : %d\n",
          V_DUAL_RESET_OPT);
+
+    i = getoptpos("V_DUAL_HI", argc, argv);
+    c = (i == -1) ? 'w' : 'r';
+    if (i != -1) V_DUAL_HI = atoi(argv[i + 1]);
+    LOGC(1, c, 'k', "Dual update with hi not hh ---------------------- : %d\n",
+         V_DUAL_HI);
+
+    i = getoptpos("V_ADJUST_WW", argc, argv);
+    c = (i == -1) ? 'w' : 'r';
+    if (i != -1) V_ADJUST_WW = atoi(argv[i + 1]);
+    LOGC(1, c, 'k', "Adjust ww while online updating ----------------- : %d\n",
+         V_ADJUST_WW);
 
     i = getoptpos("K", argc, argv);
     c = (i == -1) ? 'w' : 'r';

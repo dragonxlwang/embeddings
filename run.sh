@@ -1,5 +1,28 @@
-if [[ $3 != "nomake"  || $1 == "make" ]]; then
-  make vectors/train NOEXEC=1 CFLAGS="-DDEBUG"
+#!/usr/bin/env bash
+
+function check_cmd_arg  {
+  argarr=($(echo $1))
+  xarg=$2
+  for x in "${argarr[@]}"; do
+    if [[ $x == $xarg ]]; then
+      echo 1
+      return 0
+    fi
+  done
+  echo 0
+  return 1
+}
+
+train_debug_opt=$(check_cmd_arg "$*" DEBUG)
+train_peek_opt=$(check_cmd_arg "$*" PEEK)
+CFLAGS=""
+[[ $train_debug_opt -eq 1  ]] && { CFLAGS="-DDEBUG "; }
+[[ $train_peek_opt -eq 1  ]] && { CFLAGS+="-DDEBUGPEEK "; }
+
+nomake=$(check_cmd_arg "$*" nomake)
+
+if [[ $nomake -eq 0  || $1 == "make" ]]; then
+  make vectors/train NOEXEC=1 CFLAGS="$CFLAGS"
   make eval/eval_peek NOEXEC=1
   make eval/eval_word_distance NOEXEC=1
   make eval/eval_question_accuracy NOEXEC=1 # CFLAGS="-DACCURACY"
@@ -321,6 +344,103 @@ dcme_19=" \
   V_VOCAB_HIGH_FREQ_CUTOFF 0 \
   V_OFFLINE_INTERVAL_VOCAB_RATIO 0.1 \
   Q 0"
+
+dcme_20=" \
+  V_MODEL_DECOR_FILE_PATH dcme_gd-1e-4_nc_hi_Q-0 \
+  V_TRAIN_METHOD dcme \
+  V_INIT_GRAD_DESCENT_STEP_SIZE 1e-4 \
+  V_VOCAB_HIGH_FREQ_CUTOFF 0 \
+  V_DUAL_HI 1 \
+  Q 0"
+
+dcme_21=" \
+  V_MODEL_DECOR_FILE_PATH dcme_gd-1e-4_nc \
+  V_TRAIN_METHOD dcme \
+  V_INIT_GRAD_DESCENT_STEP_SIZE 1e-4 \
+  V_VOCAB_HIGH_FREQ_CUTOFF 0"
+
+# this is the baseline!
+# PEEK:6.43e-02 Took time 00:01:04:27
+# 0.016017 %   Semantic accuracy: 0.016294 %   Syntactic accuracy: 0.015928 %
+# SCR:3.22e+02=2.00e+00*1.61e+02 TAR=8.77e+02=1.97e+00*4.44e+02
+dcme_22=" \
+  V_MODEL_DECOR_FILE_PATH dcme_gd-1e-5_nc_hi_Q-0 \
+  V_TRAIN_METHOD dcme \
+  V_INIT_GRAD_DESCENT_STEP_SIZE 1e-5 \
+  V_VOCAB_HIGH_FREQ_CUTOFF 0 \
+  V_DUAL_HI 1 \
+  Q 0"
+
+# varing gradient step 2e-5
+# PEEK:3.93e-02 TIME:7.70e+04/00:01:04:11
+# 0.017079 %   Semantic accuracy: 0.017125 %   Syntactic accuracy: 0.017064 %
+# SCR:1.38e+07=2.53e+00*5.45e+06 TAR=1.81e+08=3.54e+00*5.11e+07
+dcme_23=" \
+  V_MODEL_DECOR_FILE_PATH dcme_gd-2e-5_nc_hi_Q-0 \
+  V_TRAIN_METHOD dcme \
+  V_INIT_GRAD_DESCENT_STEP_SIZE 2e-5 \
+  V_VOCAB_HIGH_FREQ_CUTOFF 0 \
+  V_DUAL_HI 1 \
+  Q 0"
+
+# varing gradient step 5e-5
+# PEEK:3.54e-02 TIME:8.24e+04/00:01:08:41
+# 0.016432 %   Semantic accuracy: 0.016566 %   Syntactic accuracy: 0.016388 %
+# SCR:2.11e+112=4.67e+00*4.52e+111 TAR=3.69e+113=3.29e+00*1.12e+113
+dcme_24=" \
+  V_MODEL_DECOR_FILE_PATH dcme_gd-5e-5_nc_hi_Q-0 \
+  V_TRAIN_METHOD dcme \
+  V_INIT_GRAD_DESCENT_STEP_SIZE 5e-5 \
+  V_VOCAB_HIGH_FREQ_CUTOFF 0 \
+  V_DUAL_HI 1 \
+  Q 0"
+
+# varing gradient step 1e-4
+# NAN
+dcme_25=" \
+  V_MODEL_DECOR_FILE_PATH dcme_gd-1e-4_nc_hi_Q-0 \
+  V_TRAIN_METHOD dcme \
+  V_INIT_GRAD_DESCENT_STEP_SIZE 1e-4 \
+  V_VOCAB_HIGH_FREQ_CUTOFF 0 \
+  V_DUAL_HI 1 \
+  Q 0"
+
+# repeat 22-25 but with adjusted ww
+dcme_26=" \
+  V_MODEL_DECOR_FILE_PATH dcme_gd-1e-5_nc_hi_Q-0_ww \
+  V_TRAIN_METHOD dcme \
+  V_INIT_GRAD_DESCENT_STEP_SIZE 1e-5 \
+  V_VOCAB_HIGH_FREQ_CUTOFF 0 \
+  V_DUAL_HI 1 \
+  Q 0 \
+  V_ADJUST_WW 1"
+
+dcme_27=" \
+  V_MODEL_DECOR_FILE_PATH dcme_gd-2e-5_nc_hi_Q-0_ww \
+  V_TRAIN_METHOD dcme \
+  V_INIT_GRAD_DESCENT_STEP_SIZE 2e-5 \
+  V_VOCAB_HIGH_FREQ_CUTOFF 0 \
+  V_DUAL_HI 1 \
+  Q 0 \
+  V_ADJUST_WW 1"
+
+dcme_28=" \
+  V_MODEL_DECOR_FILE_PATH dcme_gd-5e-5_nc_hi_Q-0-ww \
+  V_TRAIN_METHOD dcme \
+  V_INIT_GRAD_DESCENT_STEP_SIZE 5e-5 \
+  V_VOCAB_HIGH_FREQ_CUTOFF 0 \
+  V_DUAL_HI 1 \
+  Q 0 \
+  V_ADJUST_WW 1"
+
+dcme_29=" \
+  V_MODEL_DECOR_FILE_PATH dcme_gd-1e-4_nc_hi_Q-0-ww \
+  V_TRAIN_METHOD dcme \
+  V_INIT_GRAD_DESCENT_STEP_SIZE 1e-4 \
+  V_VOCAB_HIGH_FREQ_CUTOFF 0 \
+  V_DUAL_HI 1 \
+  Q 0 \
+  V_ADJUST_WW 1"
 
 w2v_13=" \
   V_MODEL_DECOR_FILE_PATH w2v_gd-5e-2_ns_wrh_nc \

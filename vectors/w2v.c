@@ -159,9 +159,7 @@ void W2vUpdate(int *ids, int l, unsigned long long *rs) {
 }
 
 void *W2vThreadTrain(void *arg) {
-  int i = 0;
   int tid = (long)arg;
-  unsigned long long rs = tid;
   FILE *fin = fopen(V_TEXT_FILE_PATH, "rb");
   if (!fin) {
     LOG(0, "Error!\n");
@@ -176,6 +174,9 @@ void *W2vThreadTrain(void *arg) {
   real p = 0;
   int iter_num = 0;
   fseek(fin, fbeg, SEEK_SET);  // training
+  ///////////////////////////////////////////////////////////////////////////
+  int i = 0;
+  unsigned long long rs = tid;
   while (iter_num < V_ITER_NUM) {
     wnum = TextReadSent(fin, vcb, wids, V_TEXT_LOWER, V_TEXT_RM_TRAIL_PUNC, 1);
     fpos = ftell(fin);
@@ -194,6 +195,7 @@ void *W2vThreadTrain(void *arg) {
       iter_num++;
     }
   }
+  ///////////////////////////////////////////////////////////////////////////
   fclose(fin);
   pthread_exit(NULL);
   return 0;
