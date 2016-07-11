@@ -497,4 +497,99 @@ int HeapSort(heap *h) {
   while (h->size > 0) HeapPop(h);
   return size;
 }
+
+int DictBkdrHash(char *str) {
+  unsigned long long h = 0;
+  char ch;
+  while ((ch = *(str++))) h = (h << 7) + (h << 1) + (h) + ch;
+  return h;
+}
+
+typedef struct Dictionary {
+  char **id2key;
+  real *id2val;
+  int *id2next;
+  int *hash2head;
+  int size;
+  int cap;
+} Dictionary;
+
+Dictionary *DictCreate(int cap) {
+  Dictionary *d = (Dictionary *)malloc(sizeof(Dictionary));
+  if (cap < 0) cap = 0xFFFFF;  // default 1M
+  d->id2key = (char **)malloc(cap * sizeof(char *));
+  d->id2val = (real *)malloc(cap * sizeof(real));
+  d->id2next = (int *)malloc(cap * sizeof(int));
+  d->hash2head = (int *)malloc(cap * sizeof(int));
+  d->size = 0;
+  d->cap = cap;
+  if (!d->id2key || !d->id2val || !d->id2next || !d->hash2head) {
+    LOG(0, "[Dictionary]: allocation error\n");
+    exit(1);
+  }
+  memset(d->hash2head, 0xFF, cap * sizeof(int));
+  return d;
+}
+
+void DictFree(Dictionary *d) {
+  free(d->id2key);
+  free(d->id2val);
+  free(d->id2next);
+  free(d->hash2head);
+  free(d);
+}
+
+void DictResize(Dictionary *d, int cap) {
+  int i, h;
+  d->cap = cap;
+  d->id2key = (char **)realloc(d->id2key, d->cap * sizeof(char *));
+  d->id2val = (real *)realloc(d->id2val, d->cap * sizeof(real));
+  free(d->id2next);
+  free(d->hash2head);
+  d->id2next = (int *)malloc(d->cap * sizeof(int));
+  d->hash2head = (int *)malloc(d->cap * sizeof(int));
+  if (!d->id2key || !d->id2val || !d->id2next || !d->hash2head) {
+    LOG(0, "[Dictionary]: resize error\n");
+    exit(1);
+  }
+  memset(d->hash2head, 0xFF, d->cap * sizeof(int));
+  for (i = 0; i < d->size; i++) {
+    h = DictBkdrHash(d->id2key[i]) % d->cap;
+    d->id2next[i] = d->hash2head[h];
+    d->hash2head[h] = i;
+  }
+  return;
+}
+
+void DictInsert(Dictionary *d, char *k, real v) {
+  int h = DictBkdrHash(k) % d->cap;
+  int i = d->hash2head[h];
+  while (i != -1 && strcmp(d->id2key[i], k) != 0) i = d->id2next[i];
+  if (i == -1) {
+    if (d->size == d->cap) {
+      printf("resize: %d => %d\n", d->size, d->cap);
+      DictResize(d, d->cap * 2);
+    }
+    i = d->size++;
+    d->id2key[i] = sclone(k);
+    d->id2next[i] = d->hash2head[h];
+    d->hash2head[h] = i;
+  }
+  d->id2val[i] = v;
+  return;
+}
+
+int DictLocate(Dictionary *d, char *k) {
+  int h = DictBkdrHash(k) % d->cap;
+  int i = d->hash2head[h];
+  while (i != -1 && strcmp(d->id2key[i], k) != 0) i = d->id2next[i];
+  return i;
+}
+char *DictGetKey(Dictionary *d, int i) { return d->id2key[i]; }
+real DictGetVal(Dictionary *d, int i) { return d->id2val[i]; }
+real DictGet(Dictionary *d, char *k, real default_val) {
+  int i = DictLocate(d, k);
+  return (i == -1 ? default_val : DictGetVal(d, i));
+}
+
 #endif /* ifndef UTIL_MISC */

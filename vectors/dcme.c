@@ -253,9 +253,10 @@ void DcmeAdjustWW(int ii, int zz, real c, real* g, DcmeBookkeeping* b) {
   // word probability in the cluster is 10 times higher than average or in the
   // cluster just updated
   int k;
-  for (k = 0; k < K; k++)
-    if (k == zz || b->dd[k * N + ii] * V > 10)
-      NumVecAddCVec(b->ww + k * N, g, -c, N);
+  if (V_ADJUST_WW > 0)
+    for (k = 0; k < K; k++)
+      if (k == zz || b->dd[k * N + ii] * V > V_ADJUST_WW)
+        NumVecAddCVec(b->ww + k * N, g, -c, N);
   return;
 }
 

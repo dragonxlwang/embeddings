@@ -406,6 +406,12 @@ dcme_25=" \
   Q 0"
 
 # repeat 22-25 but with adjusted ww
+# TIME:7.88e+04/00:01:05:41 GDSS:2.1983e-08
+# SCR:1.19e+02=1.13e+01*1.05e+01
+# TAR=3.65e+02=5.03e+00*7.27e+01
+# ENT:5.39e+00±4.89e+00 PEEK:1.04e-01
+# PEEK:5.30e-02
+# 0.014715 %   Semantic accuracy: 0.015115 %   Syntactic accuracy: 0.014587 %
 dcme_26=" \
   V_MODEL_DECOR_FILE_PATH dcme_gd-1e-5_nc_hi_Q-0_ww \
   V_TRAIN_METHOD dcme \
@@ -413,8 +419,14 @@ dcme_26=" \
   V_VOCAB_HIGH_FREQ_CUTOFF 0 \
   V_DUAL_HI 1 \
   Q 0 \
-  V_ADJUST_WW 1"
+  V_ADJUST_WW 10"
 
+# TIME:8.52e+04/00:01:10:58 GDSS:5.2764e-08
+# SCR:1.79e+02=3.26e+00*5.48e+01
+# TAR=5.85e+02=3.15e+00*1.86e+02
+# ENT:2.55e+00±3.74e+00 PEEK:9.83e-02
+# PEEK:5.13e-02
+# 0.017528 %   Semantic accuracy: 0.016882 %   Syntactic accuracy: 0.017735 %
 dcme_27=" \
   V_MODEL_DECOR_FILE_PATH dcme_gd-2e-5_nc_hi_Q-0_ww \
   V_TRAIN_METHOD dcme \
@@ -422,8 +434,14 @@ dcme_27=" \
   V_VOCAB_HIGH_FREQ_CUTOFF 0 \
   V_DUAL_HI 1 \
   Q 0 \
-  V_ADJUST_WW 1"
+  V_ADJUST_WW 10"
 
+# TIME:7.94e+04/00:01:06:10 GDSS:6.6070e-08
+# SCR:6.75e+02=5.14e+00*1.31e+02
+# TAR=1.77e+03=2.52e+00*7.03e+02
+# ENT:5.92e-01±2.50e+00 PEEK:8.61e-02
+# PEEK:4.61e-02
+# 0.017963 %   Semantic accuracy: 0.017470 %   Syntactic accuracy: 0.018121 %
 dcme_28=" \
   V_MODEL_DECOR_FILE_PATH dcme_gd-5e-5_nc_hi_Q-0-ww \
   V_TRAIN_METHOD dcme \
@@ -431,8 +449,14 @@ dcme_28=" \
   V_VOCAB_HIGH_FREQ_CUTOFF 0 \
   V_DUAL_HI 1 \
   Q 0 \
-  V_ADJUST_WW 1"
+  V_ADJUST_WW 10"
 
+# TIME:8.49e+04/00:01:10:43 GDSS:1.8035e-07
+# SCR:7.19e+12=2.80e+00*2.57e+12
+# TAR=3.86e+13=3.24e+00*1.19e+13
+# ENT:0.00e+00±0.00e+00 PEEK:4.68e-02
+# PEEK:3.42e-02
+# 0.016666 %   Semantic accuracy: 0.015606 %   Syntactic accuracy: 0.017006 %
 dcme_29=" \
   V_MODEL_DECOR_FILE_PATH dcme_gd-1e-4_nc_hi_Q-0-ww \
   V_TRAIN_METHOD dcme \
@@ -440,7 +464,80 @@ dcme_29=" \
   V_VOCAB_HIGH_FREQ_CUTOFF 0 \
   V_DUAL_HI 1 \
   Q 0 \
-  V_ADJUST_WW 1"
+  V_ADJUST_WW 10"
+
+# jul 9
+dcme_30=" \
+  V_MODEL_DECOR_FILE_PATH dcme_gd-1e-5_nc_hi_Q-0_ww-5 \
+  V_TRAIN_METHOD dcme \
+  V_INIT_GRAD_DESCENT_STEP_SIZE 1e-5 \
+  V_VOCAB_HIGH_FREQ_CUTOFF 0 \
+  V_DUAL_HI 1 \
+  Q 0 \
+  V_ADJUST_WW 5"
+
+dcme_31=" \
+  V_MODEL_DECOR_FILE_PATH dcme_gd-2e-5_nc_hi_Q-0_ww-5 \
+  V_TRAIN_METHOD dcme \
+  V_INIT_GRAD_DESCENT_STEP_SIZE 2e-5 \
+  V_VOCAB_HIGH_FREQ_CUTOFF 0 \
+  V_DUAL_HI 1 \
+  Q 0 \
+  V_ADJUST_WW 5"
+
+dcme_32=" \
+  V_MODEL_DECOR_FILE_PATH dcme_gd-5e-5_nc_hi_Q-0_ww-5 \
+  V_TRAIN_METHOD dcme \
+  V_INIT_GRAD_DESCENT_STEP_SIZE 5e-5 \
+  V_VOCAB_HIGH_FREQ_CUTOFF 0 \
+  V_DUAL_HI 1 \
+  Q 0 \
+  V_ADJUST_WW 5"
+
+dcme_33=" \
+  V_MODEL_DECOR_FILE_PATH dcme_gd-1e-4_nc_hi_Q-0_ww-5 \
+  V_TRAIN_METHOD dcme \
+  V_INIT_GRAD_DESCENT_STEP_SIZE 1e-4 \
+  V_VOCAB_HIGH_FREQ_CUTOFF 0 \
+  V_DUAL_HI 1 \
+  Q 0 \
+  V_ADJUST_WW 5"
+
+dcme_34=" \
+  V_MODEL_DECOR_FILE_PATH dcme_gd-1e-5_nc_hi_Q-0_ww-2 \
+  V_TRAIN_METHOD dcme \
+  V_INIT_GRAD_DESCENT_STEP_SIZE 1e-5 \
+  V_VOCAB_HIGH_FREQ_CUTOFF 0 \
+  V_DUAL_HI 1 \
+  Q 0 \
+  V_ADJUST_WW 2"
+
+dcme_35=" \
+  V_MODEL_DECOR_FILE_PATH dcme_gd-2e-5_nc_hi_Q-0_ww-2 \
+  V_TRAIN_METHOD dcme \
+  V_INIT_GRAD_DESCENT_STEP_SIZE 2e-5 \
+  V_VOCAB_HIGH_FREQ_CUTOFF 0 \
+  V_DUAL_HI 1 \
+  Q 0 \
+  V_ADJUST_WW 2"
+
+dcme_36=" \
+  V_MODEL_DECOR_FILE_PATH dcme_gd-5e-5_nc_hi_Q-0_ww-2 \
+  V_TRAIN_METHOD dcme \
+  V_INIT_GRAD_DESCENT_STEP_SIZE 5e-5 \
+  V_VOCAB_HIGH_FREQ_CUTOFF 0 \
+  V_DUAL_HI 1 \
+  Q 0 \
+  V_ADJUST_WW 2"
+
+dcme_37=" \
+  V_MODEL_DECOR_FILE_PATH dcme_gd-1e-4_nc_hi_Q-0_ww-2 \
+  V_TRAIN_METHOD dcme \
+  V_INIT_GRAD_DESCENT_STEP_SIZE 1e-4 \
+  V_VOCAB_HIGH_FREQ_CUTOFF 0 \
+  V_DUAL_HI 1 \
+  Q 0 \
+  V_ADJUST_WW 2"
 
 w2v_13=" \
   V_MODEL_DECOR_FILE_PATH w2v_gd-5e-2_ns_wrh_nc \

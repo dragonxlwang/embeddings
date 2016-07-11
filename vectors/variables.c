@@ -64,7 +64,7 @@ int V_DUAL_RESET_OPT = 1;
 // Dual update with hi not hh
 int V_DUAL_HI = 0;
 // Adjust the WW while online updating
-int V_ADJUST_WW = 0;
+real V_ADJUST_WW = -1;
 int K = 20;  // number of dual cluster
 int Q = 10;  // Number of top words in online update
 // ----------------------------- W2V specific --------------------------------
@@ -301,8 +301,8 @@ void VariableInit(int argc, char **argv) {
 
     i = getoptpos("V_ADJUST_WW", argc, argv);
     c = (i == -1) ? 'w' : 'r';
-    if (i != -1) V_ADJUST_WW = atoi(argv[i + 1]);
-    LOGC(1, c, 'k', "Adjust ww while online updating ----------------- : %d\n",
+    if (i != -1) V_ADJUST_WW = atof(argv[i + 1]);
+    LOGC(1, c, 'k', "Adjust ww while online updating ----------------- : %lf\n",
          V_ADJUST_WW);
 
     i = getoptpos("K", argc, argv);
