@@ -10,15 +10,14 @@
 #include <string.h>
 #include <time.h>
 #include <unistd.h>
+#include "../classify/constants.c"
+#include "../classify/dcme.c"
+#include "../classify/variables.c"
+#include "../classify/weight.c"
 #include "../utils/util_misc.c"
 #include "../utils/util_num.c"
 #include "../utils/util_text.c"
-#include "../vectors/constants.c"
-#include "../vectors/dcme.c"
-#include "../vectors/model.c"
-#include "../vectors/peek.c"
-#include "../vectors/variables.c"
-#include "../vectors/w2v.c"
+/* #include "../classify/w2v.c" */
 
 void Train(int argc, char* argv[]) {
   NumInit();
@@ -28,9 +27,9 @@ void Train(int argc, char* argv[]) {
   if (!strcmp(V_TRAIN_METHOD, "dcme")) {
     trainer = DcmeThreadTrain;
   } else if (!strcmp(V_TRAIN_METHOD, "w2v")) {
-    prepper = W2vPrep;
-    trainer = W2vThreadTrain;
-    cleaner = W2vClean;
+    /* prepper = W2vPrep; */
+    /* trainer = W2vThreadTrain; */
+    /* cleaner = W2vClean; */
   }
   if (prepper) prepper();
   if (trainer) {
@@ -43,8 +42,8 @@ void Train(int argc, char* argv[]) {
     free(pt);  // <<
   }
   if (cleaner) cleaner();
-  ModelSave(model, -1, V_MODEL_SAVE_PATH);  // save model
-  VariableFree();                           // <<
+  WeightSave(weight, C, N, -1, V_WEIGHT_SAVE_PATH);  // save model
+  VariableFree();                                    // <<
   LOG(1, "\nTraining finished. Took time %s\n",
       strclock(start_clock_t, clock(), V_THREAD_NUM));
   return;

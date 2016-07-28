@@ -373,9 +373,6 @@ void VariableInit(int argc, char **argv) {
     }
   }
 
-  // redefine util_text constant variables
-  TEXT_MAX_WORD_LEN = WUP;
-  TEXT_MAX_SENT_WCT = SUP;
   // use perm file instead of original
   /* V_TEXT_FILE_PATH = sformat("%s.perm", V_TEXT_FILE_PATH); */
 
@@ -387,11 +384,22 @@ void VariableInit(int argc, char **argv) {
     VocabFree(vcb);
   }
   vcb = TextLoadVocab(V_VOCAB_FILE_PATH, V, V_VOCAB_HIGH_FREQ_CUTOFF);  // >>
-  V = vcb->size;
+  if (V != vcb->size) {
+    LOGC(0, 'r', 'k', "[VOCAB]: overwrite V from %d to %d\n", V, vcb->size);
+    V = vcb->size;
+  }
   // load model if necessary,  otherwise init model with random values
-  if (V_MODEL_LOAD && fexists(V_MODEL_SAVE_PATH))
+  if (V_MODEL_LOAD && fexists(V_MODEL_SAVE_PATH)) {
     model = ModelLoad(V_MODEL_SAVE_PATH);
-  else
+    if (N != model->n) {
+      LOGC(0, 'r', 'k', "[MODEL]: overwrite N from %d to %d\n", N, model->n);
+      N = model->n;
+    }
+    if (V != model->v) {
+      LOGC(0, 'r', 'k', "[MODEL]: overwrite V from %d to %d\n", V, model->v);
+      V = model->v;
+    }
+  } else
     model = ModelCreate(V, N, model_init_amp);  // >>
 #ifdef DEBUG
   // build peek set if necessary, and load

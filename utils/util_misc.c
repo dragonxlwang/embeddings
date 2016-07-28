@@ -78,6 +78,9 @@ int log_debug_mode = 2;
 #define LOWER(c) (((c) >= 'A' && (c) <= 'Z') ? (c) - 'A' + 'a' : (c))
 #define UPPER(c) (((c) >= 'a' && (c) <= 'z') ? (c) - 'a' + 'A' : (c))
 
+int cisspace(char c) { return c == ' ' || c == '\t' || c == '\n' || c == '\r'; }
+int cisdigit(char c) { return c >= '0' && c <= '9'; }
+
 void slower(char *s) {
   int i;
   int l = strlen(s);
@@ -101,6 +104,41 @@ char *sconcat(char *sa, char *sb, int la, int lb) {
   for (i = 0; i < la; i++) s[i] = sa[i];
   for (i = 0; i < lb; i++) s[i + la] = sb[i];
   return s;
+}
+
+void srstrip(char *s) {
+  int len = strlen(s);
+  int i = len - 1;
+  while (i >= 0 && cisspace(s[i])) s[i--] = 0;
+  return;
+}
+
+void slstrip(char *s) {
+  int i = 0, j = 0;
+  while (cisspace(s[i++]))
+    ;
+  if (--i == 1) return;
+  while ((s[j++] = s[i++]) != '\0')
+    ;
+}
+
+void sstrip(char *s) {
+  srstrip(s);
+  slstrip(s);
+  return;
+}
+
+char *sreplace(char *str, char *from, char *to) {
+  char *ret = (char *)malloc(strlen(str) + strlen(from) + strlen(to) + 1);
+  char *pp = strstr(str, from), *ps = str, *pt = ret, *p1 = to;
+  while (ps != pp && *ps != 0) *(pt++) = *(ps++);
+  if (pp) {
+    while (*p1 != 0) *(pt++) = *(p1++);
+    ps += strlen(from);
+    while (*ps != 0) *(pt++) = *(ps++);
+  }
+  *pt = 0;
+  return ret;
 }
 
 char *sclone(char *s) {
@@ -498,8 +536,8 @@ int HeapSort(heap *h) {
   return size;
 }
 
-int DictBkdrHash(char *str) {
-  unsigned long long h = 0;
+unsigned long DictBkdrHash(char *str) {
+  unsigned long h = 0;
   char ch;
   while ((ch = *(str++))) h = (h << 7) + (h << 1) + (h) + ch;
   return h;

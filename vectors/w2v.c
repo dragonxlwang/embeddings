@@ -80,7 +80,7 @@ void W2vCreateNegSampleInit() {
   return;
 }
 
-int W2vNegSample(unsigned long long *rs) {
+int W2vNegSample(unsigned long *rs) {
   if (V_NS_WRH)
     return NumMultinomialWRBSample(w2v_nswrh_a, w2v_nswrh_p, V, rs);
   else
@@ -96,7 +96,7 @@ void W2vNegSampleFree() {
   return;
 }
 
-void W2vUpdate(int *ids, int l, unsigned long long *rs) {
+void W2vUpdate(int *ids, int l, unsigned long *rs) {
   int i, j, k, lt, rt, md, h0n = 0, label;
   real h0[NUP], h[NUP], hw[SUP], wd[NUP * SUP], w0[NUP], w[NUP], f;
   int window = C;  // int window = NumRand() * C + 1;
@@ -176,7 +176,7 @@ void *W2vThreadTrain(void *arg) {
   fseek(fin, fbeg, SEEK_SET);  // training
   ///////////////////////////////////////////////////////////////////////////
   int i = 0;
-  unsigned long long rs = tid;
+  unsigned long rs = tid;
   while (iter_num < V_ITER_NUM) {
     wnum = TextReadSent(fin, vcb, wids, V_TEXT_LOWER, V_TEXT_RM_TRAIL_PUNC, 1);
     fpos = ftell(fin);

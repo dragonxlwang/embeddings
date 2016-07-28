@@ -150,4 +150,4 @@ def main(dir_path, outfile_path, is_journal=True):
 
 if __name__ == '__main__':
     # main(jour_path, jour_out_path, True)
-    main(proc_path, proc_out_path, False)
+    # main(proc_path, proc_out_path, False)

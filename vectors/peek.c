@@ -135,8 +135,7 @@ PeekSet *sid_peek_build(char *text_file_path, int if_lower,
   ps->wids = (int **)malloc(cap * sizeof(int *));
   ps->wnum = (int *)malloc(cap * sizeof(int));
   int wids[SUP], wnum;
-  long long int sid = 0;
-  long int fpos1, fpos2;
+  long int sid = 0, fpos1, fpos2;
   while (!feof(fin) && (fend < 0 || ftell(fin) < fend)) {
     fpos1 = ftell(fin);
     wnum = TextReadSent(fin, vcb, wids, if_lower, if_rm_trail_punc, 1);

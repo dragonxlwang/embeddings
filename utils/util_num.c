@@ -33,12 +33,12 @@ real NumExp(real x) {
     return NUM_EXP_TABLE[i];
 }
 
-real NumRandNext(unsigned long long *seed) {
+real NumRandNext(unsigned long *seed) {
   *seed = (((*seed) * 0x5DEECE66DL + 0xBL) & 0xFFFFFFFFFFFFL);
   return ((real)((*seed) >> 16) / ((real)0xFFFFFFFFL));
 }
 
-unsigned long long RANDOM_SEED = 0x0F0F0F0FL;
+unsigned long RANDOM_SEED = 0x0F0F0F0FL;
 real NumRand() {
   // return a random number range from [0, 1)
   RANDOM_SEED = ((RANDOM_SEED * 0x5DEECE66DL + 0xBL) & 0xFFFFFFFFFFFFL);
@@ -144,7 +144,7 @@ void NumPrintArrAbsMaxColor(char *name, real *arr, int l) {
   fflush(stdout);
 }
 
-real *NumNewHugeVec(long long elem_num) {
+real *NumNewHugeVec(long elem_num) {
   real *ptr;
   if (posix_memalign((void **)&ptr, 128, elem_num * sizeof(real))) {
     LOG(0, "[NumNewHugeVec]: memory allocation failed!\n");
@@ -153,7 +153,7 @@ real *NumNewHugeVec(long long elem_num) {
   return ptr;
 }
 
-int *NumNewHugeIntVec(long long elem_num) {
+int *NumNewHugeIntVec(long elem_num) {
   int *ptr;
   if (posix_memalign((void **)&ptr, 128, elem_num * sizeof(int))) {
     LOG(0, "[NumNewHugeVec]: memory allocation failed!\n");
@@ -162,13 +162,13 @@ int *NumNewHugeIntVec(long long elem_num) {
   return ptr;
 }
 
-real *NumCloneHugeVec(real *vec, long long elem_num) {
+real *NumCloneHugeVec(real *vec, long elem_num) {
   real *ptr = NumNewHugeVec(elem_num);
   memcpy(ptr, vec, elem_num * sizeof(real));
   return ptr;
 }
 
-int *NumCloneHugeIntVec(int *vec, long long elem_num) {
+int *NumCloneHugeIntVec(int *vec, long elem_num) {
   int *ptr = NumNewHugeIntVec(elem_num);
   memcpy(ptr, vec, elem_num * sizeof(int));
   return ptr;
@@ -198,8 +198,8 @@ void NumCopyIntVec(int *d, real *s, int l) {
   return;
 }
 
-void NumReadVec(real *ptr, long long elem_num, FILE *fin) {
-  long long actual_read_size = fread(ptr, sizeof(real), elem_num, fin);
+void NumReadVec(real *ptr, long elem_num, FILE *fin) {
+  long actual_read_size = fread(ptr, sizeof(real), elem_num, fin);
   if (actual_read_size != elem_num) {
     LOG(0, "[NumReadVec]: read error!");
     exit(1);
@@ -402,6 +402,24 @@ real NumVecVar(real *a, int l) {
 
 real NumVecStd(real *a, int l) { return sqrt(NumVecVar(a, l)); }
 
+real NumSvSum(int *svk, int svn, real *svv) {
+  int i;
+  real x = 0;
+  for (i = 0; i < svn; i++) x += svv[svk[i]];
+  return x;
+}
+
+void NumVecAddCSv(real *arr, int *svk, int svn, real *svv, real c, int l) {
+  int i;
+  for (i = 0; i < svn; i++) arr[svk[i]] += c * svv[svk[i]];
+  return;
+}
+
+void NumVecAddCSvOnes(real *arr, int *svk, int svn, real c, int l) {
+  int i;
+  for (i = 0; i < svn; i++) arr[svk[i]] += c;
+  return;
+}
 void NumMultinomialWRBInit(real *m, int l, int if_sorted, int **a_ptr,
                            real **p_ptr) {
   pair *tl;
@@ -437,7 +455,7 @@ void NumMultinomialWRBInit(real *m, int l, int if_sorted, int **a_ptr,
   return;
 }
 
-int NumMultinomialWRBSample(int *a, real *p, int l, unsigned long long *rs) {
+int NumMultinomialWRBSample(int *a, real *p, int l, unsigned long *rs) {
   if (!rs) rs = &RANDOM_SEED;
   int r1 = NumRandNext(rs) * l;
   real r2 = NumRandNext(rs);
@@ -459,7 +477,7 @@ int *NumMultinomialTableInit(real *m, int l, real r) {
   return x;
 }
 
-int NumMultinomialTableSample(int *x, int l, real r, unsigned long long *rs) {
+int NumMultinomialTableSample(int *x, int l, real r, unsigned long *rs) {
   if (!rs) rs = &RANDOM_SEED;
   int j = NumRandNext(rs) * l * r;
   return x[j];

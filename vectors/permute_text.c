@@ -13,7 +13,7 @@
 Vocabulary* vcb;
 int** lwids;
 int* lwnum;
-long long int num;
+long int num;
 int cap = 0xFFFFF;
 void permute() {
   int i, j, k;
@@ -39,7 +39,7 @@ void permute() {
   int* idx = NumNewHugeIntVec(num);
   range(idx, num);
   NumPermuteIntVec(idx, num, 10.0);
-  printf("reading %lld sentences\n", num);
+  printf("reading %ld sentences\n", num);
   fclose(fin);
   FILE* fout = fopen(sformat("%s.perm", V_TEXT_FILE_PATH), "wb");
   for (i = 0; i < num; i++) {
