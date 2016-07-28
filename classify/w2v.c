@@ -27,7 +27,7 @@ void W2vThreadPrintProgBar(int dbg_lvl, int tid, real p) {
   if (sid_w2v_ppb_lock) return;
   sid_w2v_ppb_lock = 1;
 #ifdef DEBUG
-  if (NumRand() > 0.002) {
+  if (NumRand() > 0.1) {
     sid_w2v_ppb_lock = 0;
     return;
   }
@@ -98,7 +98,7 @@ void W2vUpdate(int *fsv, int fn, int label, unsigned long *rs) {
       f = NumSigmoid(NumSvSum(fsv, fn, weight + k * N) - w2v_neg_prob_log[k]);
     else  // NS
       f = NumSigmoid(NumSvSum(fsv, fn, weight + k * N));
-    NumVecAddCSvOnes(weight + k * N, fsv, fn, (label - f) * gd_ss, N);
+    NumVecAddCSvOnes(weight + k * N, fsv, fn, (b - f) * gd_ss, N);
     WeightVecRegularize(weight, k, V_WEIGHT_PROJ_BALL_NORM,
                         V_L2_REGULARIZATION_WEIGHT, N);
   }
@@ -142,7 +142,6 @@ void *W2vThreadTrain(void *arg) {
       iter_num++;
     }
   }
-  LOGCR(2);
   ///////////////////////////////////////////////////////////////////////////
   fclose(fin);
   pthread_exit(NULL);

@@ -29,7 +29,10 @@ int TestClassify(int *fsv, int fn, real *weight, int c, int n, int label,
   *p_ptr = p[label];
   int i;
   for (i = 0; i < c; i++)
-    if (i != label && p[label] < p[i]) return 0;
+    if (i != label && p[label] < p[i]) {
+      free(p);
+      return 0;
+    }
   free(p);
   return 1;
 }

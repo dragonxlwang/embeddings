@@ -1,6 +1,7 @@
 ## exclude by file type
 *.txt
 *.swp
+*.swo
 *.pyc
 *.zip
 *.tar.gz

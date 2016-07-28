@@ -13,11 +13,11 @@
 #include "../classify/constants.c"
 #include "../classify/dcme.c"
 #include "../classify/variables.c"
+#include "../classify/w2v.c"
 #include "../classify/weight.c"
 #include "../utils/util_misc.c"
 #include "../utils/util_num.c"
 #include "../utils/util_text.c"
-/* #include "../classify/w2v.c" */
 
 void Train(int argc, char* argv[]) {
   NumInit();
@@ -27,9 +27,9 @@ void Train(int argc, char* argv[]) {
   if (!strcmp(V_TRAIN_METHOD, "dcme")) {
     trainer = DcmeThreadTrain;
   } else if (!strcmp(V_TRAIN_METHOD, "w2v")) {
-    /* prepper = W2vPrep; */
-    /* trainer = W2vThreadTrain; */
-    /* cleaner = W2vClean; */
+    prepper = W2vPrep;
+    trainer = W2vThreadTrain;
+    cleaner = W2vClean;
   }
   if (prepper) prepper();
   if (trainer) {
@@ -40,6 +40,7 @@ void Train(int argc, char* argv[]) {
       pthread_create(&pt[tid], NULL, trainer, (void*)tid);
     for (tid = 0; tid < V_THREAD_NUM; tid++) pthread_join(pt[tid], NULL);
     free(pt);  // <<
+    LOGCR(2);
   }
   if (cleaner) cleaner();
   WeightSave(weight, C, N, -1, V_WEIGHT_SAVE_PATH);  // save model

@@ -271,7 +271,6 @@ void* DcmeThreadTrain(void* arg) {
       iter_num++;
     }
   }
-  LOGCR(2);
   HeapFree(twh);
   DcmeBookkeepingFree(b);
   ///////////////////////////////////////////////////////////////////////////
