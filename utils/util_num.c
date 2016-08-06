@@ -406,7 +406,6 @@ real NumSvSum(int *svk, int svn, real *svv) {
   int i;
   real x = 0;
   for (i = 0; i < svn; i++) x += svv[svk[i]];
-  for (i = 0; i < svn; i++) printf("%e\n", svv[svk[i]]);
   return x;
 }
 
