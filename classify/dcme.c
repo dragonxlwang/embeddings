@@ -25,7 +25,7 @@ typedef struct DcmeBookkeeping {  // each thread worker maintains a bookkeeping
   real* ww;                       // list(K):vector(N) W * dd, synthesis word
   real* hh;                       // list(K):vector(N) avg(h_k)
   real* hi;                       // list(K):vector(C)
-  int* hn;                        // list(K): |h_k|
+  real* hn;                       // list(K): |h_k|
   int* tw;                        // list(K):list(Q) top w (labels)
   real* twps;                     // list(K): top w probability sum
   real* ow;                       // list(K):vector(N)
@@ -38,7 +38,8 @@ void DcmeThreadPrintProgBar(int dbg_lvl, int tid, real p, DcmeBookkeeping* b) {
   if (sid_dcme_ppb_lock) return;
   sid_dcme_ppb_lock = 1;
 #ifdef DEBUG
-  if (NumRand() > 0.1) {
+  /* if (NumRand() > 0.002) { */
+  if (NumRand() > 1) {
     sid_dcme_ppb_lock = 0;
     return;
   }
@@ -69,12 +70,12 @@ DcmeBookkeeping* DcmeBookkeepingCreate() {
   b->ww = NumNewHugeVec(N * K);
   b->hh = NumNewHugeVec(N * K);
   b->hi = NumNewHugeVec(C * K);
-  b->hn = NumNewHugeIntVec(K);
+  b->hn = NumNewHugeVec(K);
   b->tw = NumNewHugeIntVec(Q * K);
   b->twps = NumNewHugeVec(K);
   b->ow = NumNewHugeVec(N * K);
   NumRandFillVec(b->hh, N * K, -weight_init_amp, weight_init_amp);
-  NumFillValIntVec(b->hn, K, 1);
+  NumFillValVec(b->hn, K, 1);
   return b;
 }
 
@@ -92,13 +93,15 @@ void DcmeBookkeepingFree(DcmeBookkeeping* b) {
   return;
 }
 
-int DcmeDualDecode(int* hsv, int hn, DcmeBookkeeping* b) {
+int DcmeDualDecode(int* hsvk, int hsvn, DcmeBookkeeping* b) {
   // fit the sentence with the best dual distribution (z)
   // which maximizes h * w(z) + entropy(z)
   real s = 0, t;
   int z = 0, k;
   for (k = 0; k < K; k++) {
-    t = NumSvSum(hsv, hn, b->ww + k * N) + b->ent[k];
+    t = NumSvSum(hsvk, hsvn, b->ww + k * N) + b->ent[k];
+    printf("%d %lf %lf %lf\n", k, NumSvSum(hsvk, hsvn, b->ww + k * N),
+           b->ent[k], t);
     if (k == 0 || t > s) {
       s = t;
       z = k;
@@ -152,7 +155,7 @@ void DcmeDualReset(int zz, DcmeBookkeeping* b) {
   return;
 }
 
-void DcmeMicroME(int zz, int ii, int* fsv, int fn, DcmeBookkeeping* b) {
+void DcmeMicroME(int zz, int label, int* fsv, int fn, DcmeBookkeeping* b) {
   int j, k, tw[QUP], twlen;
   real twps, twp[QUP];
   twlen = Q + 1;
@@ -161,19 +164,19 @@ void DcmeMicroME(int zz, int ii, int* fsv, int fn, DcmeBookkeeping* b) {
     j = b->tw[zz * Q + k];
     twp[k] = NumSvSum(fsv, fn, weight + j * N);
     tw[k] = j;
-    if (j == ii) twlen--;
+    if (j == label) twlen--;
   }
   if (twlen == Q + 1) {
-    twp[Q] = NumSvSum(fsv, fn, weight + ii * N);
-    tw[Q] = ii;
-    twps += b->dd[zz * C + ii];
+    twp[Q] = NumSvSum(fsv, fn, weight + label * N);
+    tw[Q] = label;
+    twps += b->dd[zz * C + label];
   }
   NumSoftMax(twp, 1.0, twlen);
   NumVecMulC(twp, twps, twlen);
-  if (twlen == Q + 1) twp[Q] -= b->dd[zz * C + ii];
+  if (twlen == Q + 1) twp[Q] -= b->dd[zz * C + label];
   for (k = 0; k < twlen; k++) {
     NumVecAddCSvOnes(weight + tw[k] * N, fsv, fn,
-                     ((tw[k] == ii ? 1 : 0) - twp[k]) * gd_ss, N);
+                     ((tw[k] == label ? 1 : 0) - twp[k]) * gd_ss);
     WeightVecRegularize(weight, tw[k], V_WEIGHT_PROJ_BALL_NORM,
                         V_L2_REGULARIZATION_WEIGHT, N);
   }
@@ -204,8 +207,9 @@ int DcmeUpdate(int* fsv, int fn, int label, DcmeBookkeeping* b, heap* twh) {
   int j, k, zz, flag, offline_done = 0;
   real c;
   zz = DcmeDualDecode(fsv, fn, b);
-  b->hn[zz]++;
-  NumVecAddCSvOnes(b->hh + zz * N, fsv, fn, 1, N);
+  LOG(0, "label=%d zz=%d\n", label, zz);
+  b->hn[zz] += 1;
+  NumVecAddCSvOnes(b->hh + zz * N, fsv, fn, 1);
   if (V_MICRO_ME) {
     DcmeMicroME(zz, label, fsv, fn, b);
   } else {
@@ -214,12 +218,12 @@ int DcmeUpdate(int* fsv, int fn, int label, DcmeBookkeeping* b, heap* twh) {
       j = b->tw[zz * Q + k];
       if (j == label) flag = 0;
       c = (j == label ? 1 : 0) - b->dd[zz * C + j];
-      NumVecAddCSvOnes(weight + j * N, fsv, fn, c * gd_ss, N);
+      NumVecAddCSvOnes(weight + j * N, fsv, fn, c * gd_ss);
       WeightVecRegularize(weight, j, V_WEIGHT_PROJ_BALL_NORM,
                           V_L2_REGULARIZATION_WEIGHT, N);
     }
     if (flag) {
-      NumVecAddCSvOnes(weight + label * N, fsv, fn, gd_ss, N);
+      NumVecAddCSvOnes(weight + label * N, fsv, fn, gd_ss);
       WeightVecRegularize(weight, label, V_WEIGHT_PROJ_BALL_NORM,
                           V_L2_REGULARIZATION_WEIGHT, N);
     }
@@ -270,6 +274,7 @@ void* DcmeThreadTrain(void* arg) {
         WeightSave(weight, C, N, iter_num, V_WEIGHT_SAVE_PATH);
       iter_num++;
     }
+    getchar();
   }
   HeapFree(twh);
   DcmeBookkeepingFree(b);

@@ -406,6 +406,7 @@ real NumSvSum(int *svk, int svn, real *svv) {
   int i;
   real x = 0;
   for (i = 0; i < svn; i++) x += svv[svk[i]];
+  for (i = 0; i < svn; i++) printf("%e\n", svv[svk[i]]);
   return x;
 }
 
@@ -415,7 +416,7 @@ void NumVecAddCSv(real *arr, int *svk, int svn, real *svv, real c, int l) {
   return;
 }
 
-void NumVecAddCSvOnes(real *arr, int *svk, int svn, real c, int l) {
+void NumVecAddCSvOnes(real *arr, int *svk, int svn, real c) {
   int i;
   for (i = 0; i < svn; i++) arr[svk[i]] += c;
   return;

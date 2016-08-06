@@ -98,7 +98,7 @@ void W2vUpdate(int *fsv, int fn, int label, unsigned long *rs) {
       f = NumSigmoid(NumSvSum(fsv, fn, weight + k * N) - w2v_neg_prob_log[k]);
     else  // NS
       f = NumSigmoid(NumSvSum(fsv, fn, weight + k * N));
-    NumVecAddCSvOnes(weight + k * N, fsv, fn, (b - f) * gd_ss, N);
+    NumVecAddCSvOnes(weight + k * N, fsv, fn, (b - f) * gd_ss);
     WeightVecRegularize(weight, k, V_WEIGHT_PROJ_BALL_NORM,
                         V_L2_REGULARIZATION_WEIGHT, N);
   }
