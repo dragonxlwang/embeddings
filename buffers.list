@@ -1,21 +1,21 @@
 
 /Users/xiaolong/Dropbox/workspace/s3e
-  1  a   "vectors/dcme.c"               line 81
+  1  a   "vectors/dcme.c"               line 48
   2      "vectors/w2v.c"                line 0
   3      "vectors/variables.c"          line 0
-  4      "vectors/peek.c"               line 0
+  4  a   "vectors/peek.c"               line 0
   5      "vectors/train.c"              line 0
   6      "vectors/model.c"              line 0
   7      "vectors/constants.c"          line 0
-  8 %a   "classify/dcme.c"              line 279
-  9  h   "classify/w2v.c"               line 101
+  8  a   "classify/dcme.c"              line 296
+  9  a   "classify/w2v.c"               line 75
  10      "classify/helper.c"            line 0
- 11  a   "classify/variables.c"         line 0
- 12  a   "classify/train.c"             line 0
- 13  h   "classify/weight.c"            line 16
+ 11  a   "classify/variables.c"         line 61
+ 12      "classify/train.c"             line 0
+ 13 #a   "classify/weight.c"            line 0
  14      "classify/constants.c"         line 0
- 15  a   "classify/test.c"              line 0
- 16 #h   "utils/util_num.c"             line 405
+ 15      "classify/test.c"              line 0
+ 16      "utils/util_num.c"             line 0
  17      "utils/util_misc.c"            line 0
  18      "utils/util_text.c"            line 0
  19      "eval/eval_word_distance.c"    line 0
@@ -23,7 +23,8 @@
  21      "eval/eval_msrpc.c"            line 0
  22      "eval/eval_load_model.c"       line 0
  23      "eval/eval_peek.c"             line 0
- 24  a   "eval/eval_classify.c"         line 0
+ 24  a   "eval/eval_classify.c"         line 29
  25      "vectors.sh"                   line 0
- 26  a   "classify.sh"                  line 88
+ 26  a   "classify.sh"                  line 49
  27      "test/test.c"                  line 0
+ 28 %a   "eval/eval_fit_test.c"         line 103

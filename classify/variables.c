@@ -76,7 +76,7 @@ Dictionary *classes;
 clock_t start_clock_t;  // start time for weight training
 
 // ------------------------ global private variables --------------------------
-real weight_init_amp = 1e-4;  // weight init: small value for numeric stability
+real weight_init_amp = 0.01;  // weight init: large value for random init
 typedef void *(*ThreadTrain)(void *);
 typedef void (*MainWork)();
 
@@ -113,6 +113,7 @@ void VariableInit(int argc, char **argv) {
     V_TEST_FILE_PATH = sclone(argv[i + 1]);
   else
     V_TEST_FILE_PATH = sreplace(V_TRAIN_FILE_PATH, "train", "test");
+  V_TEST_FILE_PATH= FilePathExpand(V_TEST_FILE_PATH);
   LOGC(1, c, 'k', "Test File --------------------------------------- : %s\n",
        V_TEST_FILE_PATH);
 

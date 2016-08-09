@@ -39,6 +39,8 @@ void EvalClassify() {
   printf("total       = %d\n", total);
   printf("accuracy    = %lf\n", (double)correct / total);
   printf("probability = %lf\n", totalp / total);
+
+#ifdef DEBUG
   pair* detail_tuple = sortedi(detail_total, C, 1);
   for (j = 0; j < C; j++) {
     i = detail_tuple[j].key;
@@ -47,9 +49,10 @@ void EvalClassify() {
              detail_correct[i], detail_total[i],
              (double)detail_correct[i] / detail_total[i]);
   }
+  free(detail_tuple);
+#endif
   free(detail_correct);
   free(detail_total);
-  free(detail_tuple);
   fclose(fin);
 }
 

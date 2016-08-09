@@ -33,6 +33,27 @@ typedef struct DcmeBookkeeping {  // each thread worker maintains a bookkeeping
 int dcme_dual_update_total_cnt = 0;
 int dcme_dual_update_cnt[KUP] = {0};
 
+char* DcmeDualModelDebugInfoStr(DcmeBookkeeping* b) {
+  int j, k;
+  char* ddis = malloc(0x1000);
+  real eem = NumVecMean(b->ent, K);
+  real ees = NumVecStd(b->ent, K);
+  pair* dps = sortedi(dcme_dual_update_cnt, K, 1);
+  sprintfc(ddis, 'g', 'k', "ENT:%.2e\u00b1%.2e", eem, ees);
+  saprintf(ddis, " ");
+  saprintf(ddis, "\n");
+  for (j = 0; j < K; j++) {
+    if (j % 10 == 0 && j != 0) saprintf(ddis, "\n");
+    k = dps[j].key;
+    saprintfc(
+        ddis, 'y', 'k', "[%02d]:%.3lf:", k,
+        (double)dcme_dual_update_cnt[k] / (dcme_dual_update_total_cnt + 1));
+    saprintfc(ddis, 'c', 'k', "%.2e", b->ent[k]);
+    saprintf(ddis, " ");
+  }
+  free(dps);
+  return ddis;
+}
 int sid_dcme_ppb_lock = 0;
 void DcmeThreadPrintProgBar(int dbg_lvl, int tid, real p, DcmeBookkeeping* b) {
   if (sid_dcme_ppb_lock) return;
@@ -45,11 +66,15 @@ void DcmeThreadPrintProgBar(int dbg_lvl, int tid, real p, DcmeBookkeeping* b) {
   }
   char* wdis = WeightDebugInfoStr(weight, C, N, p, tid, start_clock_t,
                                   V_THREAD_NUM, gd_ss);
+  char* ddis = DcmeDualModelDebugInfoStr(b);
   LOGCR(dbg_lvl);
   if (V_WEIGHT_DECOR_FILE_PATH)
     LOG(dbg_lvl, "[%s]: ", V_WEIGHT_DECOR_FILE_PATH);
   LOG(dbg_lvl, "%s", wdis);
+  LOG(dbg_lvl, " ");
+  LOG(dbg_lvl, "%s", ddis);
   free(wdis);
+  free(ddis);
 #else
   char* wdis = WeightDebugInfoStr(weight, C, N, p, tid, start_clock_t,
                                   V_THREAD_NUM, gd_ss);
@@ -74,7 +99,7 @@ DcmeBookkeeping* DcmeBookkeepingCreate() {
   b->tw = NumNewHugeIntVec(Q * K);
   b->twps = NumNewHugeVec(K);
   b->ow = NumNewHugeVec(N * K);
-  NumRandFillVec(b->hh, N * K, -weight_init_amp, weight_init_amp);
+  NumRandFillVec(b->hh, N * K, 0, weight_init_amp);
   NumFillValVec(b->hn, K, 1);
   return b;
 }
@@ -100,8 +125,6 @@ int DcmeDualDecode(int* hsvk, int hsvn, DcmeBookkeeping* b) {
   int z = 0, k;
   for (k = 0; k < K; k++) {
     t = NumSvSum(hsvk, hsvn, b->ww + k * N) + b->ent[k];
-    printf("%d %lf %lf %lf\n", k, NumSvSum(hsvk, hsvn, b->ww + k * N),
-           b->ent[k], t);
     if (k == 0 || t > s) {
       s = t;
       z = k;
@@ -207,7 +230,6 @@ int DcmeUpdate(int* fsv, int fn, int label, DcmeBookkeeping* b, heap* twh) {
   int j, k, zz, flag, offline_done = 0;
   real c;
   zz = DcmeDualDecode(fsv, fn, b);
-  LOG(0, "label=%d zz=%d\n", label, zz);
   b->hn[zz] += 1;
   NumVecAddCSvOnes(b->hh + zz * N, fsv, fn, 1);
   if (V_MICRO_ME) {
@@ -227,10 +249,10 @@ int DcmeUpdate(int* fsv, int fn, int label, DcmeBookkeeping* b, heap* twh) {
       WeightVecRegularize(weight, label, V_WEIGHT_PROJ_BALL_NORM,
                           V_L2_REGULARIZATION_WEIGHT, N);
     }
-    if (b->hn[zz] >= C * V_OFFLINE_INTERVAL_CLASS_RATIO) {
-      DcmeOfflineUpdate(zz, b, twh);
-      offline_done = 1;
-    }
+  }
+  if (b->hn[zz] >= C * V_OFFLINE_INTERVAL_CLASS_RATIO) {
+    DcmeOfflineUpdate(zz, b, twh);
+    offline_done = 1;
   }
   return offline_done;
 }
@@ -274,7 +296,6 @@ void* DcmeThreadTrain(void* arg) {
         WeightSave(weight, C, N, iter_num, V_WEIGHT_SAVE_PATH);
       iter_num++;
     }
-    getchar();
   }
   HeapFree(twh);
   DcmeBookkeepingFree(b);
