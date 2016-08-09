@@ -822,7 +822,8 @@ dcme_1i=" \
   N 30000 \
   K 20 \
   Q 10 \
-  V_CACHE_INTERMEDIATE_WEIGHT 1"
+  V_CACHE_INTERMEDIATE_WEIGHT 1 \
+  V_ITER_NUM 1000"
 
 w2v_1i=" \
   V_WEIGHT_DECOR_FILE_PATH w2v_gd-1e-1_N-30K_NEG-20_nce_wrh \
@@ -832,7 +833,8 @@ w2v_1i=" \
   V_NS_NEG 20 \
   V_NCE 1 \
   V_NS_WRH 1 \
-  V_CACHE_INTERMEDIATE_WEIGHT 1"
+  V_CACHE_INTERMEDIATE_WEIGHT 1 \
+  V_ITER_NUM 1000"
 
 eval "bin=\$$1"
 eval "model=\$$2"
