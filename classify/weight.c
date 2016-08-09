@@ -70,6 +70,7 @@ real *WeightLoad(char *fp, int *cptr, int *nptr) {
   LOGC(1, 'c', 'k', "[WEIGHT]: Load weight from %s\n", fp);
   LOGC(1, 'c', 'k', "[WEIGHT]: C = %d\n", c);
   LOGC(1, 'c', 'k', "[WEIGHT]: N = %d\n", n);
+  fclose(fin);
   return w;
 }
 

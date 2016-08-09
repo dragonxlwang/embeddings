@@ -57,6 +57,7 @@ void EvalClassify(char* weight_file_path, char* test_file_path,
   }
   free(detail_tuple);
 #endif
+  free(weight);
   free(detail_correct);
   free(detail_total);
   fclose(fin);
@@ -80,7 +81,8 @@ void* sid_classify_thread(void* param) {
                  probability_ptr + j);
     completed_iters++;
     LOGCLR(0);
-    LOG(0, "complet %d / %d", completed_iters, V_ITER_NUM);
+    LOG(0, "complet %d / %d, %d instances", completed_iters, V_ITER_NUM,
+        total_ptr[j]);
     free(wfp);
   }
   return NULL;
@@ -115,7 +117,7 @@ void EvalMultiThreadClassify(int fitting) {
     parameters[i * stride + j++] = accuracy_ptr;
     parameters[i * stride + j++] = probability_ptr;
   }
-  printf("%s ", fitting ? "Training" : "Testing");
+  printf("%s\n", fitting ? "Training" : "Testing");
   pthread_t* pt = (pthread_t*)malloc(V_THREAD_NUM * sizeof(pthread_t));  // >>
   for (i = 0; i < V_THREAD_NUM; i++)
     pthread_create(pt + i, NULL, sid_classify_thread,
@@ -136,6 +138,7 @@ void EvalMultiThreadClassify(int fitting) {
   free(total_ptr);
   free(accuracy_ptr);
   free(probability_ptr);
+  return;
 }
 
 int main(int argc, char** argv) {
