@@ -59,7 +59,7 @@ int V_DUAL_RESET_OPT = 1;
 int K = 20;  // number of dual cluster
 int Q = 10;  // Number of top words in online update
 
-// ----------------------------- W2V specific --------------------------------
+// ----------------------------- W2V/NSME specific ----------------------------
 int V_NS_WRH = 1;
 real V_NS_POWER = 0.75;
 int V_NS_NEG = 5;
@@ -113,7 +113,7 @@ void VariableInit(int argc, char **argv) {
     V_TEST_FILE_PATH = sclone(argv[i + 1]);
   else
     V_TEST_FILE_PATH = sreplace(V_TRAIN_FILE_PATH, "train", "test");
-  V_TEST_FILE_PATH= FilePathExpand(V_TEST_FILE_PATH);
+  V_TEST_FILE_PATH = FilePathExpand(V_TEST_FILE_PATH);
   LOGC(1, c, 'k', "Test File --------------------------------------- : %s\n",
        V_TEST_FILE_PATH);
 
@@ -261,8 +261,9 @@ void VariableInit(int argc, char **argv) {
     if (i != -1) Q = atoi(argv[i + 1]);
     LOGC(1, c, 'k', "Q -- micro maximal entropy size ----------------- : %d\n",
          Q);
-  } else if (!strcmp(V_TRAIN_METHOD, "w2v")) {
-    LOGC(1, 'g', 'k', "== W2V specific ==\n");
+  } else if (!strcmp(V_TRAIN_METHOD, "w2v") ||
+             !strcmp(V_TRAIN_METHOD, "nsme")) {
+    LOGC(1, 'g', 'k', "== W2V/NSME specific ==\n");
 
     i = getoptpos("V_NS_WRH", argc, argv);
     c = (i == -1) ? 'w' : 'r';
@@ -306,6 +307,15 @@ void VariableInit(int argc, char **argv) {
     }
     x = (QUP > Q);
     LOG(1, "        QUP > Q: %s (%d > %d)\n", x == 1 ? "yes" : "no", QUP, Q);
+    if (x == 0) {
+      LOG(0, "fail!");
+      exit(1);
+    }
+  }
+  if (!strcmp(V_TRAIN_METHOD, "nsme")) {
+    x = (QUP > V_NS_NEG);
+    LOG(1, "        QUP > V_NS_NEG: %s (%d > %d)\n", x == 1 ? "yes" : "no", QUP,
+        V_NS_NEG);
     if (x == 0) {
       LOG(0, "fail!");
       exit(1);

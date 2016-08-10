@@ -54,6 +54,7 @@ char* DcmeDualModelDebugInfoStr(DcmeBookkeeping* b) {
   free(dps);
   return ddis;
 }
+
 int sid_dcme_ppb_lock = 0;
 void DcmeThreadPrintProgBar(int dbg_lvl, int tid, real p, DcmeBookkeeping* b) {
   if (sid_dcme_ppb_lock) return;
