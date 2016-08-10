@@ -12,6 +12,7 @@
 #include <unistd.h>
 #include "../classify/constants.c"
 #include "../classify/dcme.c"
+#include "../classify/nsme.c"
 #include "../classify/variables.c"
 #include "../classify/w2v.c"
 #include "../classify/weight.c"
@@ -30,6 +31,10 @@ void Train(int argc, char* argv[]) {
     prepper = W2vPrep;
     trainer = W2vThreadTrain;
     cleaner = W2vClean;
+  } else if (!strcmp(V_TRAIN_METHOD, "nsme")) {
+    prepper = NsmePrep;
+    trainer = NsmeThreadTrain;
+    cleaner = NsmeClean;
   }
   if (prepper) prepper();
   if (trainer) {
