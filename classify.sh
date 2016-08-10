@@ -855,7 +855,8 @@ nsme_1i=" \
   V_NS_NEG 20 \
   V_NCE 1 \
   V_NS_WRH 1 \
-  V_ITER_NUM 100"
+  V_CACHE_INTERMEDIATE_WEIGHT 1 \
+  V_ITER_NUM 1000"
 
 eval "bin=\$$1"
 eval "model=\$$2"
