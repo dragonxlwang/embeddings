@@ -227,7 +227,10 @@ void VariableInit(int argc, char **argv) {
        N);
 
   i = getoptpos("V_TRAIN_METHOD", argc, argv);
+  c = (i == -1) ? 'w' : 'r';
   if (i != -1) V_TRAIN_METHOD = sclone(argv[i + 1]);
+  LOGC(1, c, 'k', "Train Mehod ------------------------------------- : %s\n",
+       V_TRAIN_METHOD);
 
   if (!strcmp(V_TRAIN_METHOD, "dcme")) {
     LOGC(1, 'g', 'k', "== DCME specific ==\n");

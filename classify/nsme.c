@@ -102,7 +102,7 @@ void NsmeUpdate(int *fsv, int fn, int label, unsigned long *rs) {
       prob[j] = NumSvSum(fsv, fn, weight + k * N);
   }
   NumSoftMax(prob, 1, V_NS_NEG + 1);
-  for (j = 0; j < V_NS_NEG; j++) {
+  for (j = 0; j <= V_NS_NEG; j++) {
     k = ids[j];
     b = (j == V_NS_NEG) ? 1 : 0;
     NumVecAddCSvOnes(weight + k * N, fsv, fn, (b - prob[j]) * gd_ss);
