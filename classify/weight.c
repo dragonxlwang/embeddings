@@ -46,23 +46,19 @@ void WeightSave(real *w, int c, int n, int iter_num, char *fp) {
 }
 
 real *WeightLoad(char *fp, int *cptr, int *nptr) {
-  FILE *fin = fopen(fp, "rb");
-  if (!fin) {
-    LOG(0, "Error!\n");
-    exit(1);
-  }
+  FILE *fin = fsopen(fp, "rb");
   int c, n;
   if (fread(&c, sizeof(int), 1, fin) != 1) {
-    LOG(0, "Error!\n");
+    LOG(0, "WeightLoad Error c!\n");
     exit(1);
   }
   if (fread(&n, sizeof(int), 1, fin) != 1) {
-    LOG(0, "Error!\n");
+    LOG(0, "WeightLoad Error n!\n");
     exit(1);
   }
   real *w = NumNewHugeVec(c * n);
   if (fread(w, sizeof(real), c * n, fin) != c * n) {
-    LOG(0, "Error!\n");
+    LOG(0, "WeightLoad Error w!\n");
     exit(1);
   }
   *nptr = n;

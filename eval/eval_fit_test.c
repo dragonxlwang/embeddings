@@ -15,11 +15,7 @@ void EvalClassify(char* weight_file_path, char* test_file_path,
   int fsv[LUP], fn, label, correct = 0, total = 0, x;
   real p, totalp = 0;
   long int fsz = FileSize(test_file_path);
-  FILE* fin = fopen(test_file_path, "rb");
-  if (!fin) {
-    LOG(0, "Error!\n");
-    exit(1);
-  }
+  FILE* fin = fsopen(test_file_path, "rb");
   int weightc, weightn;
   real* weight = WeightLoad(weight_file_path, &weightc, &weightn);
   int* detail_correct = NumNewHugeIntVec(C);
@@ -61,6 +57,7 @@ void EvalClassify(char* weight_file_path, char* test_file_path,
   free(detail_correct);
   free(detail_total);
   fclose(fin);
+  return;
 }
 
 void* sid_classify_thread(void* param) {
@@ -81,8 +78,8 @@ void* sid_classify_thread(void* param) {
                  probability_ptr + j);
     completed_iters++;
     LOGCLR(0);
-    LOG(0, "complet %d / %d, %d instances", completed_iters, V_ITER_NUM,
-        total_ptr[j]);
+    LOG(0, "complet %d / %d, %d instances, iter %d", completed_iters,
+        V_ITER_NUM, total_ptr[j], j);
     free(wfp);
   }
   return NULL;
@@ -93,7 +90,8 @@ void EvalMultiThreadClassify(int fitting) {
   int** assigned_iters = (int**)malloc(V_THREAD_NUM * sizeof(int*));
   int* assigned_num = (int*)malloc(V_THREAD_NUM * sizeof(int));
   for (i = 0; i < V_THREAD_NUM; i++) {
-    assigned_iters[i] = (int*)malloc(V_ITER_NUM / V_THREAD_NUM + 2);
+    assigned_iters[i] =
+        (int*)malloc((V_ITER_NUM / V_THREAD_NUM + 2) * sizeof(int));
     assigned_num[i] = 0;
   }
   for (i = 0; i < V_ITER_NUM; i++) {
@@ -106,7 +104,6 @@ void EvalMultiThreadClassify(int fitting) {
   int* total_ptr = (int*)malloc(V_ITER_NUM * sizeof(int));
   real* accuracy_ptr = (real*)malloc(V_ITER_NUM * sizeof(real));
   real* probability_ptr = (real*)malloc(V_ITER_NUM * sizeof(real));
-
   for (i = 0; i < V_THREAD_NUM; i++) {
     j = 0;
     parameters[i * stride + j++] = assigned_iters[i];
@@ -123,14 +120,14 @@ void EvalMultiThreadClassify(int fitting) {
     pthread_create(pt + i, NULL, sid_classify_thread,
                    (void*)(parameters + i * stride));
   for (i = 0; i < V_THREAD_NUM; i++) pthread_join(pt[i], NULL);
-  free(pt);
   printf("\n");
-  for (i = 0; i < V_THREAD_NUM; i++) free(assigned_iters[i]);
   for (i = 0; i < V_ITER_NUM; i++) {
     printf("iter %3d: accuracy = %6d / %6d = %.6lf%% probability = %.6lf%%\n",
            i, correct_ptr[i], total_ptr[i], (real)accuracy_ptr[i],
            (real)probability_ptr[i]);
   }
+  free(pt);
+  for (i = 0; i < V_THREAD_NUM; i++) free(assigned_iters[i]);
   free(assigned_iters);
   free(assigned_num);
   free(parameters);

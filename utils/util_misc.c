@@ -322,6 +322,15 @@ int fexists(const char *filename) {
   return (file != 0);
 }
 
+FILE *fsopen(const char *filename, const char *mode) {
+  FILE *fin = fopen(filename, mode);
+  if (!fin) {
+    LOG(0, "Error! Can't Open File: %s\n", filename);
+    exit(1);
+  }
+  return fin;
+}
+
 char *FilePathExpand(char *fp) {
   wordexp_t ep;
   wordexp(fp, &ep, 0);

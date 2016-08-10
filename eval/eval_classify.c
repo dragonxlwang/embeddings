@@ -8,14 +8,10 @@
 #include "../utils/util_text.c"
 
 void EvalClassify() {
-  int fsv[LUP], fn, label, correct = 0, total = 0, x, i, j;
+  int fsv[LUP], fn, label, correct = 0, total = 0, x;
   real p, totalp = 0;
   long int fsz = FileSize(V_TEST_FILE_PATH);
-  FILE* fin = fopen(V_TEST_FILE_PATH, "rb");
-  if (!fin) {
-    LOG(0, "Error!\n");
-    exit(1);
-  }
+  FILE* fin = fsopen(V_TEST_FILE_PATH, "rb");
   int* detail_correct = NumNewHugeIntVec(C);
   int* detail_total = NumNewHugeIntVec(C);
   NumFillZeroIntVec(detail_correct, C);
@@ -41,6 +37,7 @@ void EvalClassify() {
   printf("probability = %lf\n", totalp / total);
 
 #ifdef DEBUG
+  int i, j;
   pair* detail_tuple = sortedi(detail_total, C, 1);
   for (j = 0; j < C; j++) {
     i = detail_tuple[j].key;
