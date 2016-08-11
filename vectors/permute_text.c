@@ -36,8 +36,7 @@ void permute() {
       lwnum = (int*)realloc(lwnum, cap * sizeof(int));
     }
   }
-  int* idx = NumNewHugeIntVec(num);
-  range(idx, num);
+  int* idx = range(num);
   NumPermuteIntVec(idx, num, 10.0);
   printf("reading %ld sentences\n", num);
   fclose(fin);

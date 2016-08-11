@@ -412,10 +412,11 @@ long int FileSize(char *fp) {
 int sign(real x) { return (x == 0 ? 0 : (x < 0 ? -1 : 1)); }
 int signi(int x) { return (x == 0 ? 0 : (x < 0 ? -1 : 1)); }
 
-void range(int *idx, int size) {
+int *range(int size) {
+  int *idx = (int *)malloc(size * sizeof(int));
   int i;
   for (i = 0; i < size; i++) idx[i] = i;
-  return;
+  return idx;
 }
 
 typedef struct pair {
