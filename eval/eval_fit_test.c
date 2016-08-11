@@ -78,8 +78,11 @@ void* sid_classify_thread(void* param) {
                  probability_ptr + j);
     completed_iters++;
     LOGCLR(0);
-    LOG(0, "complet %d / %d, %d instances, iter %d", completed_iters,
-        V_ITER_NUM, total_ptr[j], j);
+    LOG(0,
+        "complet %d / %d, %d instances, iter %d, accuracy = %lf, probability = "
+        "%lf",
+        completed_iters, V_ITER_NUM, total_ptr[j], j, accuracy_ptr[j],
+        probability_ptr[j]);
     free(wfp);
   }
   return NULL;
