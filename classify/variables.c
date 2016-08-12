@@ -323,6 +323,12 @@ void VariableInit(int argc, char **argv) {
       LOG(0, "fail!");
       exit(1);
     }
+    x = (CUP > C);
+    LOG(1, "        CUP > C: %s (%d > %d)\n", x == 1 ? "yes" : "no", CUP, C);
+    if (x == 0) {
+      LOG(0, "fail!");
+      exit(1);
+    }
   }
 
   // build vocab if necessary, load, and set V by smaller actual size

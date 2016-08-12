@@ -89,21 +89,32 @@ void NsmeNegSampleFree() {
   return;
 }
 
+void NsmeMeUpdate(int *fsv, int fn, int label, unsigned long *rs) {
+  int k, b;
+  real prob[CUP];
+  for (k = 0; k < C; k++) prob[k] = NumSvSum(fsv, fn, weight + k * N);
+  NumSoftMax(prob, 1, C);
+  for (k = 0; k < C; k++) {
+    b = (k == label) ? 1 : 0;
+    NumVecAddCSvOnes(weight + k * N, fsv, fn, (b - prob[k]) * gd_ss);
+    WeightVecRegularize(weight, k, V_WEIGHT_PROJ_BALL_NORM,
+                        V_L2_REGULARIZATION_WEIGHT, N);
+  }
+  return;
+}
+
 void NsmeUpdate(int *fsv, int fn, int label, unsigned long *rs) {
   int j, k, b;
   real prob[QUP];
   int ids[QUP];
-  if (V_NS_NEG) {
-    for (j = 0; j <= V_NS_NEG; j++) {
-      k = (j < V_NS_NEG) ? NsmeNegSample(rs) : label;
-      ids[j] = k;
-      if (V_NCE)
-        prob[j] = NumSvSum(fsv, fn, weight + k * N) - nsme_neg_prob_log[k];
-      else  // NS
-        prob[j] = NumSvSum(fsv, fn, weight + k * N);
-    }
-  } else  // full maximal entropy
-    for (k = 0; k < C; k++) prob[j] = NumSvSum(fsv, fn, weight + k * N);
+  for (j = 0; j <= V_NS_NEG; j++) {
+    k = (j < V_NS_NEG) ? NsmeNegSample(rs) : label;
+    ids[j] = k;
+    if (V_NCE)
+      prob[j] = NumSvSum(fsv, fn, weight + k * N) - nsme_neg_prob_log[k];
+    else  // NS
+      prob[j] = NumSvSum(fsv, fn, weight + k * N);
+  }
   NumSoftMax(prob, 1, V_NS_NEG + 1);
   for (j = 0; j <= V_NS_NEG; j++) {
     k = ids[j];
@@ -137,7 +148,12 @@ void *NsmeThreadTrain(void *arg) {
     HelperReadInstance(fin, vcb, classes, fsv, &fn, &label, V_TEXT_LOWER,
                        V_TEXT_RM_TRAIL_PUNC);
     fpos = ftell(fin);
-    if (fn > 0 && label != -1) NsmeUpdate(fsv, fn, label, &rs);
+    if (fn > 0 && label != -1) {
+      if (V_NS_NEG)
+        NsmeUpdate(fsv, fn, label, &rs);
+      else
+        NsmeMeUpdate(fsv, fn, label, &rs);
+    }
     if (i++ >= 10000) {
       i = 0;
       progress[tid] = iter_num + (double)(fpos - fbeg) / (fend - fbeg);  // prog

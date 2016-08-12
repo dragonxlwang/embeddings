@@ -877,6 +877,15 @@ me_1i=" \
   # V_CACHE_INTERMEDIATE_WEIGHT 1 \
   V_ITER_NUM 100"
 
+nsme_2i=" \
+  V_WEIGHT_DECOR_FILE_PATH me_gd-1e-1_N-30K \
+  V_TRAIN_METHOD nsme \
+  V_INIT_GRAD_DESCENT_STEP_SIZE 1e-1 \
+  N 30000 \
+  V_NS_NEG 20 \
+  # V_CACHE_INTERMEDIATE_WEIGHT 1 \
+  V_ITER_NUM 100"
+
 eval "bin=\$$1"
 eval "model=\$$2"
 model=$model
