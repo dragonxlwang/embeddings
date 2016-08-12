@@ -92,7 +92,8 @@ void* sid_classify_thread(void* param) {
   return NULL;
 }
 
-void EvalMultiThreadClassify(int fitting, real sample_rate) {
+void EvalMultiThreadClassify(int fitting, real sample_rate, real** acc_ptr_addr,
+                             real** prob_ptr_addr) {
   int i, j;
   int** assigned_iters = (int**)malloc(V_THREAD_NUM * sizeof(int*));
   int* assigned_num = (int*)malloc(V_THREAD_NUM * sizeof(int));
@@ -143,8 +144,10 @@ void EvalMultiThreadClassify(int fitting, real sample_rate) {
   free(parameters);
   free(correct_ptr);
   free(total_ptr);
-  free(accuracy_ptr);
-  free(probability_ptr);
+  /* free(accuracy_ptr); */
+  /* free(probability_ptr); */
+  *acc_ptr_addr = accuracy_ptr;
+  *prob_ptr_addr = probability_ptr;
   free(tidx);
   return;
 }
@@ -152,9 +155,22 @@ void EvalMultiThreadClassify(int fitting, real sample_rate) {
 int main(int argc, char** argv) {
   NumInit();
   VariableInit(argc, argv);
+  real *test_acc, *test_prob, *fit_acc, *fit_prob;
   log_debug_mode = 0;
-  EvalMultiThreadClassify(0, 1);
+  EvalMultiThreadClassify(0, 1, &test_acc, &test_prob);
   completed_iters = 0;
-  EvalMultiThreadClassify(1, 1.0 / 9);
+  EvalMultiThreadClassify(1, 1.0 / 9, &fit_acc, &fit_prob);
+  char* rfp = FilePathSubExtension(V_WEIGHT_SAVE_PATH, "result");
+  FILE* fout = fsopen(rfp, "wb");
+  int i;
+  for (i = 0; i < V_ITER_NUM; i++)
+    printf("%lf %lf %lf %lf\n", test_acc[i], test_prob[i], fit_acc[i],
+           fit_prob[i]);
+  fclose(fout);
+  free(rfp);
+  free(test_acc);
+  free(test_prob);
+  free(fit_acc);
+  free(fit_prob);
   return 0;
 }
