@@ -8,6 +8,5 @@
 #define WUP TEXT_MAX_WORD_LEN  // upper bound for character number in a word
 #define SUP TEXT_MAX_SENT_WCT  // upper bound for word number in a sentence
 #define LUP 0xFFFF             // upper bound for a sentence length (abstract)
-#define CUP 100000             // upper bound for number of classes
-
+#define CUP 101010             // upper bound for number of classes
 #endif /* ifndef CONSTANTS */
