@@ -145,6 +145,7 @@ void EvalMultiThreadClassify(int fitting, real sample_rate) {
   free(total_ptr);
   free(accuracy_ptr);
   free(probability_ptr);
+  free(tidx);
   return;
 }
 

@@ -93,14 +93,17 @@ void NsmeUpdate(int *fsv, int fn, int label, unsigned long *rs) {
   int j, k, b;
   real prob[QUP];
   int ids[QUP];
-  for (j = 0; j <= V_NS_NEG; j++) {
-    k = (j < V_NS_NEG) ? NsmeNegSample(rs) : label;
-    ids[j] = k;
-    if (V_NCE)
-      prob[j] = NumSvSum(fsv, fn, weight + k * N) - nsme_neg_prob_log[k];
-    else  // NS
-      prob[j] = NumSvSum(fsv, fn, weight + k * N);
-  }
+  if (V_NS_NEG) {
+    for (j = 0; j <= V_NS_NEG; j++) {
+      k = (j < V_NS_NEG) ? NsmeNegSample(rs) : label;
+      ids[j] = k;
+      if (V_NCE)
+        prob[j] = NumSvSum(fsv, fn, weight + k * N) - nsme_neg_prob_log[k];
+      else  // NS
+        prob[j] = NumSvSum(fsv, fn, weight + k * N);
+    }
+  } else  // full maximal entropy
+    for (k = 0; k < C; k++) prob[j] = NumSvSum(fsv, fn, weight + k * N);
   NumSoftMax(prob, 1, V_NS_NEG + 1);
   for (j = 0; j <= V_NS_NEG; j++) {
     k = ids[j];
@@ -156,12 +159,12 @@ void *NsmeThreadTrain(void *arg) {
 }
 
 void NsmePrep() {
-  NsmeCreateNegSampleInit();
+  if (V_NS_NEG) NsmeCreateNegSampleInit();
   return;
 }
 
 void NsmeClean() {
-  NsmeNegSampleFree();
+  if (V_NS_NEG) NsmeNegSampleFree();
   return;
 }
 #endif /* ifndef NSME */
