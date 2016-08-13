@@ -163,9 +163,12 @@ int main(int argc, char** argv) {
   char* rfp = FilePathSubExtension(V_WEIGHT_SAVE_PATH, "result");
   FILE* fout = fsopen(rfp, "wb");
   int i;
-  for (i = 0; i < V_ITER_NUM; i++)
+  for (i = 0; i < V_ITER_NUM; i++) {
     printf("%lf %lf %lf %lf\n", test_acc[i], test_prob[i], fit_acc[i],
            fit_prob[i]);
+    fprintf(fout, "%lf %lf %lf %lf\n", test_acc[i], test_prob[i], fit_acc[i],
+            fit_prob[i]);
+  }
   fclose(fout);
   free(rfp);
   free(test_acc);
