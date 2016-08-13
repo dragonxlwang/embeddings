@@ -1,6 +1,6 @@
 
 /Users/xiaolong/Dropbox/workspace/s3e
-  1 %a   "vectors/dcme.c"               line 73
+  1 %a   "vectors/dcme.c"               line 74
   2      "vectors/w2v.c"                line 0
   3      "vectors/variables.c"          line 0
   4      "vectors/peek.c"               line 0
@@ -25,7 +25,7 @@
  23      "eval/eval_load_model.c"       line 0
  24      "eval/eval_peek.c"             line 0
  25      "eval/eval_classify.c"         line 0
- 26      "vectors.sh"                   line 0
- 27      "classify.sh"                  line 0
- 28      "test/test.c"                  line 0
- 29      "eval/eval_fit_test.c"         line 0
+ 26      "eval/eval_fit_test.c"         line 0
+ 27      "vectors.sh"                   line 0
+ 28      "classify.sh"                  line 0
+ 29      "test/test.c"                  line 0
