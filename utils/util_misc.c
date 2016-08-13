@@ -540,6 +540,8 @@ int HeapPop(heap *h) {
   sid_misc_heap_sift_down(h->d, h->size);
   return h->d[h->size].key;
 }
+int HeapTopKey(heap *h) { return h->d[h->size].key; }
+int HeapTopVal(heap *h) { return h->d[h->size].val; }
 int HeapSort(heap *h) {
   int size = h->size;
   while (h->size > 0) HeapPop(h);

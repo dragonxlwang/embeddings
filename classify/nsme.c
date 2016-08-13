@@ -89,22 +89,50 @@ void NsmeNegSampleFree() {
   return;
 }
 
-void NsmeMeUpdate(int *fsv, int fn, int label, unsigned long *rs) {
-  int k, b;
-  real prob[CUP];
-  for (k = 0; k < C; k++) prob[k] = NumSvSum(fsv, fn, weight + k * N);
-  NumSoftMax(prob, 1, C);
-  for (k = 0; k < C; k++) {
+void sid_nsme_me_update(int *fsv, int fn, int label, real *prob, int *ids,
+                        int num) {
+  NumSoftMax(prob, 1, num);
+  int j, k, b;
+  for (j = 0; j < num; j++) {
+    k = ids[j];
     b = (k == label) ? 1 : 0;
-    NumVecAddCSvOnes(weight + k * N, fsv, fn, (b - prob[k]) * gd_ss);
+    NumVecAddCSvOnes(weight + k * N, fsv, fn, (b - prob[j]) * gd_ss);
     WeightVecRegularize(weight, k, V_WEIGHT_PROJ_BALL_NORM,
                         V_L2_REGULARIZATION_WEIGHT, N);
   }
   return;
 }
 
+void NsmeMeUpdate(int *fsv, int fn, int label, unsigned long *rs, heap *h) {
+  int k, b, num, flag = 0;
+  real prob[CUP];
+  int ids[CUP];
+
+  for (k = 0; k < C; k++) prob[k] = NumSvSum(fsv, fn, weight + k * N);
+  if (V_ME_TOP) {
+    HeapEmpty(h);
+    for (k = 0; k < C; k++) HeapPush(h, k, prob[k]);
+    for (k = 0; k < V_ME_TOP; k++) {
+      HeapPop(h);
+      ids[k] = HeapTopKey(h);
+      prob[k] = HeapTopVal(h);
+      if (ids[k] == label) flag = 1;
+    }
+    if (!flag) {
+      ids[V_ME_TOP] = label;
+      prob[V_ME_TOP] = NumSvSum(fsv, fn, weight + label * N);
+    }
+    num = V_ME_TOP + 1 - flag;
+  } else {
+    for (k = 0; k < C; k++) ids[k] = k;
+    num = C;
+  }
+  sid_nsme_me_update(fsv, fn, label, prob, ids, num);
+  return;
+}
+
 void NsmeUpdate(int *fsv, int fn, int label, unsigned long *rs) {
-  int j, k, b;
+  int j, k;
   real prob[QUP];
   int ids[QUP];
   for (j = 0; j <= V_NS_NEG; j++) {
@@ -115,14 +143,7 @@ void NsmeUpdate(int *fsv, int fn, int label, unsigned long *rs) {
     else  // NS
       prob[j] = NumSvSum(fsv, fn, weight + k * N);
   }
-  NumSoftMax(prob, 1, V_NS_NEG + 1);
-  for (j = 0; j <= V_NS_NEG; j++) {
-    k = ids[j];
-    b = (j == V_NS_NEG) ? 1 : 0;
-    NumVecAddCSvOnes(weight + k * N, fsv, fn, (b - prob[j]) * gd_ss);
-    WeightVecRegularize(weight, k, V_WEIGHT_PROJ_BALL_NORM,
-                        V_L2_REGULARIZATION_WEIGHT, N);
-  }
+  sid_nsme_me_update(fsv, fn, label, prob, ids, V_NS_NEG + 1);
   return;
 }
 
@@ -144,6 +165,8 @@ void *NsmeThreadTrain(void *arg) {
   ///////////////////////////////////////////////////////////////////////////
   int i = 0;
   unsigned long rs = tid;
+  heap *hp;
+  if (V_ME_TOP) hp = HeapCreate(V_ME_TOP);
   while (iter_num < V_ITER_NUM) {
     HelperReadInstance(fin, vcb, classes, fsv, &fn, &label, V_TEXT_LOWER,
                        V_TEXT_RM_TRAIL_PUNC);
@@ -152,7 +175,7 @@ void *NsmeThreadTrain(void *arg) {
       if (V_NS_NEG)
         NsmeUpdate(fsv, fn, label, &rs);
       else
-        NsmeMeUpdate(fsv, fn, label, &rs);
+        NsmeMeUpdate(fsv, fn, label, &rs, hp);
     }
     if (i++ >= 10000) {
       i = 0;

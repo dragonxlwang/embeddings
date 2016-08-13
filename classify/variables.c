@@ -64,6 +64,7 @@ int V_NS_WRH = 1;
 real V_NS_POWER = 0.75;
 int V_NS_NEG = 5;
 int V_NCE = 0;
+int V_ME_TOP = 0;
 
 // ---------------------------- global variables ------------------------------
 Vocabulary *vcb;  // vocabulary
@@ -238,19 +239,19 @@ void VariableInit(int argc, char **argv) {
     i = getoptpos("V_OFFLINE_INTERVAL_CLASS_RATIO", argc, argv);
     c = (i == -1) ? 'w' : 'r';
     if (i != -1) V_OFFLINE_INTERVAL_CLASS_RATIO = atof(argv[i + 1]);
-    LOGC(1, c, 'k', "Offline interval / online update / class number - : %lf\n",
+    LOGC(1, c, 'k', "Offline Interval / Online Update / Class Number - : %lf\n",
          (double)V_OFFLINE_INTERVAL_CLASS_RATIO);
 
     i = getoptpos("V_MICRO_ME", argc, argv);
     c = (i == -1) ? 'w' : 'r';
     if (i != -1) V_MICRO_ME = atoi(argv[i + 1]);
-    LOGC(1, c, 'k', "Micro ME for top words -------------------------- : %d\n",
+    LOGC(1, c, 'k', "Micro ME for Top Words -------------------------- : %d\n",
          V_MICRO_ME);
 
     i = getoptpos("V_DUAL_RESET_OPT", argc, argv);
     c = (i == -1) ? 'w' : 'r';
     if (i != -1) V_DUAL_RESET_OPT = atoi(argv[i + 1]);
-    LOGC(1, c, 'k', "Dual reset option ------------------------------- : %d\n",
+    LOGC(1, c, 'k', "Dual Reset Option ------------------------------- : %d\n",
          V_DUAL_RESET_OPT);
 
     i = getoptpos("K", argc, argv);
@@ -277,13 +278,13 @@ void VariableInit(int argc, char **argv) {
     i = getoptpos("V_NS_POWER", argc, argv);
     c = (i == -1) ? 'w' : 'r';
     if (i != -1) V_NS_POWER = atof(argv[i + 1]);
-    LOGC(1, c, 'k', "Skew the unigram distribution with power -------- : %lf\n",
+    LOGC(1, c, 'k', "Skew the Unigram Distribution with Power -------- : %lf\n",
          (double)V_NS_POWER);
 
     i = getoptpos("V_NS_NEG", argc, argv);
     c = (i == -1) ? 'w' : 'r';
     if (i != -1) V_NS_NEG = atoi(argv[i + 1]);
-    LOGC(1, c, 'k', "Negative Sample number of words ----------------- : %d\n",
+    LOGC(1, c, 'k', "Negative Sample Number of Words ----------------- : %d\n",
          V_NS_NEG);
 
     i = getoptpos("V_NCE", argc, argv);
@@ -291,6 +292,12 @@ void VariableInit(int argc, char **argv) {
     if (i != -1) V_NCE = atoi(argv[i + 1]);
     LOGC(1, c, 'k', "Use Negative Contrastive Estimation ------------- : %d\n",
          V_NCE);
+
+    i = getoptpos("V_ME_TOP", argc, argv);
+    c = (i == -1) ? 'w' : 'r';
+    if (i != -1) V_ME_TOP = atoi(argv[i + 1]);
+    LOGC(1, c, 'k', "Maximal Entropy Constrained to Top Classes ------ : %d\n",
+         V_ME_TOP);
   }
 
   LOGC(1, 'g', 'k', "== Sanity Checks ==\n");
@@ -319,6 +326,13 @@ void VariableInit(int argc, char **argv) {
     x = (QUP > V_NS_NEG);
     LOG(1, "        QUP > V_NS_NEG: %s (%d > %d)\n", x == 1 ? "yes" : "no", QUP,
         V_NS_NEG);
+    if (x == 0) {
+      LOG(0, "fail!");
+      exit(1);
+    }
+    x = (QUP > V_ME_TOP);
+    LOG(1, "        QUP > V_ME_TOP: %s (%d > %d)\n", x == 1 ? "yes" : "no", QUP,
+        V_ME_TOP);
     if (x == 0) {
       LOG(0, "fail!");
       exit(1);
