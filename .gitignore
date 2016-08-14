@@ -6,6 +6,7 @@
 *.zip
 *.tar.gz
 *.gz
+*.result
 tags
 
 ## exclude special cases
