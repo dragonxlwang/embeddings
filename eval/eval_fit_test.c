@@ -133,8 +133,8 @@ void EvalMultiThreadClassify(int fitting, real sample_rate, real** acc_ptr_addr,
   for (i = 0; i < V_THREAD_NUM; i++) pthread_join(pt[i], NULL);
   printf("\n");
   for (i = 0; i < V_ITER_NUM; i++) {
-    printf("iter %3d: accuracy = %6d / %6d = %.6lf%% probability = %.6lf%%\n",
-           i, correct_ptr[i], total_ptr[i], (real)accuracy_ptr[i],
+    printf("iter %3d: accuracy = %6d / %6d = %.6lf probability = %.6lf\n", i,
+           correct_ptr[i], total_ptr[i], (real)accuracy_ptr[i],
            (real)probability_ptr[i]);
   }
   free(pt);
