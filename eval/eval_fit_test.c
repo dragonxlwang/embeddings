@@ -169,6 +169,7 @@ int main(int argc, char** argv) {
     fprintf(fout, "%lf %lf %lf %lf\n", test_acc[i], test_prob[i], fit_acc[i],
             fit_prob[i]);
   }
+  printf("dump to file: %s\n", rfp);
   fclose(fout);
   free(rfp);
   free(test_acc);
