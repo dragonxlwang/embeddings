@@ -60,8 +60,8 @@ void DcmeThreadPrintProgBar(int dbg_lvl, int tid, real p, DcmeBookkeeping* b) {
   if (sid_dcme_ppb_lock) return;
   sid_dcme_ppb_lock = 1;
 #ifdef DEBUG
-  /* if (NumRand() > 0.002) { */
-  if (NumRand() > 1) {
+  if (NumRand() > 0.002) {
+    /* if (NumRand() > 1) { */
     sid_dcme_ppb_lock = 0;
     return;
   }
