@@ -31,6 +31,7 @@ typedef struct DcmeBookkeeping {  // each thread worker maintains a bookkeeping
   real* ow;                       // list(K):vector(N)
 } DcmeBookkeeping;
 DcmeBookkeeping* bkkp;
+heap* top_word_heap;
 int dcme_dual_update_total_cnt = 0;
 int dcme_dual_update_cnt[KUP] = {0};
 
@@ -277,7 +278,7 @@ void* DcmeThreadTrain(void* arg) {
   ///////////////////////////////////////////////////////////////////////////
   int k;
   DcmeBookkeeping* b = V_THREAD_DUAL ? DcmeBookkeepingCreate() : bkkp;
-  heap* twh = HeapCreate(Q);
+  heap* twh = V_THREAD_DUAL ? HeapCreate(Q) : top_word_heap;
   for (k = 0; k < K; k++) {  // initialize dual
     DcmeDualUpdate(k, b, twh);
     DcmeDualReset(k, b);
@@ -299,8 +300,10 @@ void* DcmeThreadTrain(void* arg) {
       iter_num++;
     }
   }
-  HeapFree(twh);
-  if (V_THREAD_DUAL) DcmeBookkeepingFree(b);
+  if (V_THREAD_DUAL) {
+    DcmeBookkeepingFree(b);
+    HeapFree(twh);
+  }
   ///////////////////////////////////////////////////////////////////////////
   fclose(fin);
   pthread_exit(NULL);
@@ -308,12 +311,18 @@ void* DcmeThreadTrain(void* arg) {
 }
 
 void DcmePrep() {
-  if (!V_THREAD_DUAL) bkkp = DcmeBookkeepingCreate();
+  if (!V_THREAD_DUAL) {
+    bkkp = DcmeBookkeepingCreate();
+    top_word_heap = HeapCreate(Q);
+  }
   return;
 }
 
 void DcmeClean() {
-  if (!V_THREAD_DUAL) DcmeBookkeepingFree(bkkp);
+  if (!V_THREAD_DUAL) {
+    DcmeBookkeepingFree(bkkp);
+    HeapFree(top_word_heap);
+  }
   return;
 }
 
