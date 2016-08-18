@@ -7,15 +7,15 @@
   5      "vectors/train.c"              line 0
   6      "vectors/model.c"              line 0
   7      "vectors/constants.c"          line 0
-  8  a   "classify/dcme.c"              line 213
-  9  a   "classify/w2v.c"               line 1
- 10  a   "classify/nsme.c"              line 93
+  8 %a   "classify/dcme.c"              line 55
+  9 #a   "classify/w2v.c"               line 1
+ 10  a   "classify/nsme.c"              line 0
  11      "classify/helper.c"            line 0
- 12  a   "classify/variables.c"         line 296
- 13  h   "classify/train.c"             line 38
- 14 #a   "classify/weight.c"            line 15
+ 12  a   "classify/variables.c"         line 0
+ 13  h   "classify/train.c"             line 0
+ 14  a   "classify/weight.c"            line 0
  15      "classify/constants.c"         line 0
- 16  h   "classify/test.c"              line 25
+ 16  h   "classify/test.c"              line 0
  17      "utils/util_num.c"             line 0
  18  a   "utils/util_misc.c"            line 0
  19      "utils/util_text.c"            line 0
@@ -25,7 +25,7 @@
  23      "eval/eval_load_model.c"       line 0
  24      "eval/eval_peek.c"             line 0
  25      "eval/eval_classify.c"         line 0
- 26  a   "eval/eval_fit_test.c"         line 28
+ 26  a   "eval/eval_fit_test.c"         line 0
  27      "vectors.sh"                   line 0
- 28 %a   "classify.sh"                  line 845
+ 28  a   "classify.sh"                  line 0
  29      "test/test.c"                  line 0

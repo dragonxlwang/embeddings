@@ -26,7 +26,9 @@ void Train(int argc, char* argv[]) {
   MainWork prepper = NULL, cleaner = NULL;
   ThreadTrain trainer = NULL;
   if (!strcmp(V_TRAIN_METHOD, "dcme")) {
+    prepper = DcmePrep;
     trainer = DcmeThreadTrain;
+    cleaner = DcmeClean;
   } else if (!strcmp(V_TRAIN_METHOD, "w2v")) {
     prepper = W2vPrep;
     trainer = W2vThreadTrain;

@@ -43,6 +43,8 @@ int V_CACHE_INTERMEDIATE_WEIGHT = 0;
 int V_VOCAB_OVERWRITE = 0;
 // if load weight from file instead of random initiailization
 int V_WEIGHT_LOAD = 0;
+// dual bookkeeping per thread or shared
+int V_THREAD_DUAL = 1;
 
 int N = 30000;   // (max) feature weight dimension
 int C = 100000;  // (max) class number
@@ -220,6 +222,12 @@ void VariableInit(int argc, char **argv) {
   if (i != -1) V_WEIGHT_LOAD = atoi(argv[i + 1]);
   LOGC(1, c, 'k', "Load Weight from File for Initialization -------- : %d\n",
        V_WEIGHT_LOAD);
+
+  i = getoptpos("V_THREAD_DUAL", argc, argv);
+  c = (i == -1) ? 'w' : 'r';
+  if (i != -1) V_THREAD_DUAL = atoi(argv[i + 1]);
+  LOGC(1, c, 'k', "Dual Clusters per Thread or Shared -------------- : %d\n",
+       V_THREAD_DUAL);
 
   i = getoptpos("N", argc, argv);
   c = (i == -1) ? 'w' : 'r';

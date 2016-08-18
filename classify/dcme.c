@@ -30,6 +30,7 @@ typedef struct DcmeBookkeeping {  // each thread worker maintains a bookkeeping
   real* twps;                     // list(K): top w probability sum
   real* ow;                       // list(K):vector(N)
 } DcmeBookkeeping;
+DcmeBookkeeping* bkkp;
 int dcme_dual_update_total_cnt = 0;
 int dcme_dual_update_cnt[KUP] = {0};
 
@@ -275,7 +276,7 @@ void* DcmeThreadTrain(void* arg) {
   fseek(fin, fbeg, SEEK_SET);  // training
   ///////////////////////////////////////////////////////////////////////////
   int k;
-  DcmeBookkeeping* b = DcmeBookkeepingCreate();
+  DcmeBookkeeping* b = V_THREAD_DUAL ? DcmeBookkeepingCreate() : bkkp;
   heap* twh = HeapCreate(Q);
   for (k = 0; k < K; k++) {  // initialize dual
     DcmeDualUpdate(k, b, twh);
@@ -299,11 +300,21 @@ void* DcmeThreadTrain(void* arg) {
     }
   }
   HeapFree(twh);
-  DcmeBookkeepingFree(b);
+  if (V_THREAD_DUAL) DcmeBookkeepingFree(b);
   ///////////////////////////////////////////////////////////////////////////
   fclose(fin);
   pthread_exit(NULL);
   return 0;
+}
+
+void DcmePrep() {
+  if (!V_THREAD_DUAL) bkkp = DcmeBookkeepingCreate();
+  return;
+}
+
+void DcmeClean() {
+  if (!V_THREAD_DUAL) DcmeBookkeepingFree(bkkp);
+  return;
 }
 
 #endif /* ifndef DCME */
