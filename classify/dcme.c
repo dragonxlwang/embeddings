@@ -29,9 +29,10 @@ typedef struct DcmeBookkeeping {  // each thread worker maintains a bookkeeping
   int* tw;                        // list(K):list(Q) top w (labels)
   real* twps;                     // list(K): top w probability sum
   real* ow;                       // list(K):vector(N)
+  int* freeze;                    // flag to show if currently being updated
 } DcmeBookkeeping;
-DcmeBookkeeping* bkkp;
-heap* top_word_heap;
+DcmeBookkeeping** blst;
+heap** hlst;
 int dcme_dual_update_total_cnt = 0;
 int dcme_dual_update_cnt[KUP] = {0};
 
@@ -62,8 +63,8 @@ void DcmeThreadPrintProgBar(int dbg_lvl, int tid, real p, DcmeBookkeeping* b) {
   if (sid_dcme_ppb_lock) return;
   sid_dcme_ppb_lock = 1;
 #ifdef DEBUG
-  if (NumRand() > 0.002) {
-    /* if (NumRand() > 1) { */
+  /* if (NumRand() > 0.002) { */
+  if (NumRand() > 1) {
     sid_dcme_ppb_lock = 0;
     return;
   }
@@ -102,8 +103,10 @@ DcmeBookkeeping* DcmeBookkeepingCreate() {
   b->tw = NumNewHugeIntVec(Q * K);
   b->twps = NumNewHugeVec(K);
   b->ow = NumNewHugeVec(N * K);
+  b->freeze = NumNewHugeIntVec(K);
   NumRandFillVec(b->hh, N * K, 0, weight_init_amp);
   NumFillValVec(b->hn, K, 1);
+  NumFillZeroIntVec(b->freeze, K);
   return b;
 }
 
@@ -117,6 +120,7 @@ void DcmeBookkeepingFree(DcmeBookkeeping* b) {
   free(b->tw);
   free(b->twps);
   free(b->ow);
+  free(b->freeze);
   free(b);
   return;
 }
@@ -162,10 +166,6 @@ void DcmeDualUpdate(int zz, DcmeBookkeeping* b, heap* twh) {
   } else {
     NumMulVecMat(b->dd + zz * C, weight, C, N, b->ww + zz * N);  // ww
   }
-  return;
-}
-
-void DcmeDualReset(int zz, DcmeBookkeeping* b) {
   // dual reset distribution (hh and hn) of zz
   if (V_DUAL_RESET_OPT == 1) {  // ------------------- 1) clean reset
     b->hn[zz] = 0;
@@ -209,7 +209,18 @@ void DcmeMicroME(int zz, int label, int* fsv, int fn, DcmeBookkeeping* b) {
   return;
 }
 
-void DcmeOfflineUpdate(int zz, DcmeBookkeeping* b, heap* twh) {
+int DcmeDualFreeze(int zz, DcmeBookkeeping* b) {
+  int i = 0;
+  for (i = 0; i < 5e2; i++)
+    if (b->freeze[zz]) return 0;
+  b->freeze[zz] = 1;
+  return 1;
+}
+
+void DcmeDualRelease(int zz, DcmeBookkeeping* b) { b->freeze[zz] = 0; }
+
+int DcmeOfflineUpdate(int zz, DcmeBookkeeping* b, heap* twh) {
+  if (!DcmeDualFreeze(zz, b)) return 0;
   int j, k;
   for (j = 0, k = 0; j < C; j++) {
     if (k < Q && j == b->tw[zz * Q + k])
@@ -223,14 +234,14 @@ void DcmeOfflineUpdate(int zz, DcmeBookkeeping* b, heap* twh) {
   if (V_L2_REGULARIZATION_WEIGHT >= 0)
     NumVecMulC(weight, 1 - V_L2_REGULARIZATION_WEIGHT, N * C);
   DcmeDualUpdate(zz, b, twh);
-  DcmeDualReset(zz, b);
   dcme_dual_update_total_cnt++;
   dcme_dual_update_cnt[zz]++;
-  return;
+  DcmeDualRelease(zz, b);
+  return 1;
 }
 
 int DcmeUpdate(int* fsv, int fn, int label, DcmeBookkeeping* b, heap* twh) {
-  int j, k, zz, flag, offline_done = 0;
+  int j, k, zz, flag;
   real c;
   zz = DcmeDualDecode(fsv, fn, b);
   b->hn[zz] += 1;
@@ -253,11 +264,8 @@ int DcmeUpdate(int* fsv, int fn, int label, DcmeBookkeeping* b, heap* twh) {
                           V_L2_REGULARIZATION_WEIGHT, N);
     }
   }
-  if (b->hn[zz] >= C * V_OFFLINE_INTERVAL_CLASS_RATIO) {
-    DcmeOfflineUpdate(zz, b, twh);
-    offline_done = 1;
-  }
-  return offline_done;
+  return (b->hn[zz] >= C * V_OFFLINE_INTERVAL_CLASS_RATIO &&
+          DcmeOfflineUpdate(zz, b, twh));
 }
 
 void* DcmeThreadTrain(void* arg) {
@@ -277,11 +285,12 @@ void* DcmeThreadTrain(void* arg) {
   fseek(fin, fbeg, SEEK_SET);  // training
   ///////////////////////////////////////////////////////////////////////////
   int k;
-  DcmeBookkeeping* b = V_THREAD_DUAL ? DcmeBookkeepingCreate() : bkkp;
-  heap* twh = V_THREAD_DUAL ? HeapCreate(Q) : top_word_heap;
+  DcmeBookkeeping* b = blst[tid / V_THREADS_PER_DUAL];
+  heap* twh = hlst[tid / V_THREADS_PER_DUAL];
   for (k = 0; k < K; k++) {  // initialize dual
+    if (!DcmeDualFreeze(k, b)) continue;
     DcmeDualUpdate(k, b, twh);
-    DcmeDualReset(k, b);
+    DcmeDualRelease(k, b);
   }
   while (iter_num < V_ITER_NUM) {
     HelperReadInstance(fin, vcb, classes, fsv, &fn, &label, V_TEXT_LOWER,
@@ -300,10 +309,6 @@ void* DcmeThreadTrain(void* arg) {
       iter_num++;
     }
   }
-  if (V_THREAD_DUAL) {
-    DcmeBookkeepingFree(b);
-    HeapFree(twh);
-  }
   ///////////////////////////////////////////////////////////////////////////
   fclose(fin);
   pthread_exit(NULL);
@@ -311,18 +316,26 @@ void* DcmeThreadTrain(void* arg) {
 }
 
 void DcmePrep() {
-  if (!V_THREAD_DUAL) {
-    bkkp = DcmeBookkeepingCreate();
-    top_word_heap = HeapCreate(Q);
+  int d = V_THREAD_NUM / V_THREADS_PER_DUAL + 1;
+  blst = (DcmeBookkeeping**)malloc(d * sizeof(DcmeBookkeeping*));
+  hlst = (heap**)malloc(d * sizeof(heap*));
+  int i;
+  for (i = 0; i < d; i++) {
+    blst[i] = DcmeBookkeepingCreate();
+    hlst[i] = HeapCreate(Q);
   }
   return;
 }
 
 void DcmeClean() {
-  if (!V_THREAD_DUAL) {
-    DcmeBookkeepingFree(bkkp);
-    HeapFree(top_word_heap);
+  int d = V_THREAD_NUM / V_THREADS_PER_DUAL + 1;
+  int i;
+  for (i = 0; i < d; i++) {
+    DcmeBookkeepingFree(blst[i]);
+    HeapFree(hlst[i]);
   }
+  free(blst);
+  free(hlst);
   return;
 }
 

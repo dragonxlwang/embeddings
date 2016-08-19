@@ -56,8 +56,8 @@ real V_OFFLINE_INTERVAL_CLASS_RATIO = 1;
 int V_MICRO_ME = 0;
 // Dual Reset option
 int V_DUAL_RESET_OPT = 1;
-// dual bookkeeping per thread or shared
-int V_THREAD_DUAL = 1;
+// number of threads sharing one dual bookkeeping
+int V_THREADS_PER_DUAL = 1;
 int K = 20;  // number of dual cluster
 int Q = 10;  // Number of top words in online update
 
@@ -256,11 +256,11 @@ void VariableInit(int argc, char **argv) {
     LOGC(1, c, 'k', "Dual Reset Option ------------------------------- : %d\n",
          V_DUAL_RESET_OPT);
 
-    i = getoptpos("V_THREAD_DUAL", argc, argv);
+    i = getoptpos("V_THREADS_PER_DUAL", argc, argv);
     c = (i == -1) ? 'w' : 'r';
-    if (i != -1) V_THREAD_DUAL = atoi(argv[i + 1]);
-    LOGC(1, c, 'k', "Dual Clusters per Thread or Shared -------------- : %d\n",
-         V_THREAD_DUAL);
+    if (i != -1) V_THREADS_PER_DUAL = atoi(argv[i + 1]);
+    LOGC(1, c, 'k', "Number of Threads Sharing a Dual Clustering ----- : %d\n",
+         V_THREADS_PER_DUAL);
 
     i = getoptpos("K", argc, argv);
     c = (i == -1) ? 'w' : 'r';

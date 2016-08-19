@@ -162,6 +162,10 @@ int *NumNewHugeIntVec(long elem_num) {
   return ptr;
 }
 
+real *NumNewVec(long elem_num) { return malloc(elem_num * sizeof(real)); }
+
+real *NumNewIntVec(long elem_num) { return malloc(elem_num * sizeof(int)); }
+
 real *NumCloneHugeVec(real *vec, long elem_num) {
   real *ptr = NumNewHugeVec(elem_num);
   memcpy(ptr, vec, elem_num * sizeof(real));
