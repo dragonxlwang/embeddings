@@ -166,40 +166,38 @@ real *NumNewVec(long elem_num) { return malloc(elem_num * sizeof(real)); }
 
 real *NumNewIntVec(long elem_num) { return malloc(elem_num * sizeof(int)); }
 
+void NumCopyVec(real *d, real *s, int l) {
+  memcpy(d, s, l * sizeof(real));
+  return;
+}
+
+void NumCopyIntVec(int *d, int *s, int l) {
+  memcpy(d, s, l * sizeof(int));
+  return;
+}
+
 real *NumCloneHugeVec(real *vec, long elem_num) {
   real *ptr = NumNewHugeVec(elem_num);
-  memcpy(ptr, vec, elem_num * sizeof(real));
+  NumCopyVec(ptr, vec, elem_num);
   return ptr;
 }
 
 int *NumCloneHugeIntVec(int *vec, long elem_num) {
   int *ptr = NumNewHugeIntVec(elem_num);
-  memcpy(ptr, vec, elem_num * sizeof(int));
+  NumCopyIntVec(ptr, vec, elem_num);
   return ptr;
 }
 
 real *NumCloneVec(real *vec, int elem_num) {
   real *ptr = malloc(elem_num * sizeof(real));
-  memcpy(ptr, vec, elem_num * sizeof(real));
+  NumCopyVec(ptr, vec, elem_num);
   return ptr;
 }
 
 int *NumCloneIntVec(int *vec, int elem_num) {
   int *ptr = malloc(elem_num * sizeof(int));
-  memcpy(ptr, vec, elem_num * sizeof(int));
+  NumCopyIntVec(ptr, vec, elem_num);
   return ptr;
-}
-
-void NumCopyVec(real *d, real *s, int l) {
-  int i;
-  for (i = 0; i < l; i++) d[i] = s[i];
-  return;
-}
-
-void NumCopyIntVec(int *d, real *s, int l) {
-  int i;
-  for (i = 0; i < l; i++) d[i] = s[i];
-  return;
 }
 
 void NumReadVec(real *ptr, long elem_num, FILE *fin) {
