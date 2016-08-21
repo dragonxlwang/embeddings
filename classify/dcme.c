@@ -21,7 +21,6 @@
 
 typedef struct DcmeBookkeeping {  // each thread worker maintains a bookkeeping
   real* dd;                       // list(K):vector(C) dual distribution
-  real* udd;                      // list(K):vector(C)
   real* ent;                      // list(K):
   real* ww;                       // list(K):vector(N) W * dd, synthesis word
   real* hh;                       // list(K):vector(N) avg(h_k)
@@ -30,8 +29,6 @@ typedef struct DcmeBookkeeping {  // each thread worker maintains a bookkeeping
   int* tw;                        // list(K):list(Q) top w (labels)
   real* twps;                     // list(K): top w probability sum
   real* ow;                       // list(K):vector(N)
-  real* uww;                      // list(K):vector(N) W * dd, synthesis word
-  real* uow;                      // list(K):vector(N)
   int* freeze;                    // flag to show if currently being updated
 } DcmeBookkeeping;
 DcmeBookkeeping** blst;
@@ -98,7 +95,6 @@ void DcmeThreadPrintProgBar(int dbg_lvl, int tid, real p, DcmeBookkeeping* b) {
 DcmeBookkeeping* DcmeBookkeepingCreate() {
   DcmeBookkeeping* b = (DcmeBookkeeping*)malloc(sizeof(DcmeBookkeeping));
   b->dd = NumNewHugeVec(C * K);
-  b->udd = NumNewHugeVec(C * K);
   b->ent = NumNewHugeVec(K);
   b->ww = NumNewHugeVec(N * K);
   b->hh = NumNewHugeVec(N * K);
@@ -107,8 +103,6 @@ DcmeBookkeeping* DcmeBookkeepingCreate() {
   b->tw = NumNewHugeIntVec(Q * K);
   b->twps = NumNewHugeVec(K);
   b->ow = NumNewHugeVec(N * K);
-  b->uww = NumNewHugeVec(N * K);
-  b->uow = NumNewHugeVec(N * K);
   b->freeze = NumNewHugeIntVec(K);
   NumRandFillVec(b->hh, N * K, 0, weight_init_amp);
   NumFillValVec(b->hn, K, 1);
@@ -118,7 +112,6 @@ DcmeBookkeeping* DcmeBookkeepingCreate() {
 
 void DcmeBookkeepingFree(DcmeBookkeeping* b) {
   free(b->dd);
-  free(b->udd);
   free(b->ent);
   free(b->ww);
   free(b->hh);
@@ -127,8 +120,6 @@ void DcmeBookkeepingFree(DcmeBookkeeping* b) {
   free(b->tw);
   free(b->twps);
   free(b->ow);
-  free(b->uww);
-  free(b->uow);
   free(b->freeze);
   free(b);
   return;
@@ -151,11 +142,11 @@ int DcmeDualDecode(int* hsvk, int hsvn, DcmeBookkeeping* b) {
 
 void DcmeDualUpdate(int zz, DcmeBookkeeping* b, heap* twh) {
   // quick update: dd, ww, ow, twps,
-  int j, k;
-  real ent, twps;
-  NumMulMatVec(weight, b->hh + zz * N, C, N, b->udd + zz * C);  // dd
-  ent = NumSoftMax(b->udd + zz * C, b->hn[zz], C);              // ent (sm)
-  NumCopyVec(b->dd + zz * C, b->udd + zz * C, C);
+  int j, k, tw[QUP];
+  real ent, twps, dd[CUP], ow[NUP], ww[NUP];
+  NumMulMatVec(weight, b->hh + zz * N, C, N, dd);  // dd
+  ent = NumSoftMax(dd, b->hn[zz], C);              // ent (sm)
+  NumCopyVec(b->dd + zz * C, dd, C);
   b->ent[zz] = ent;
   // dual reset distribution (hh and hn) of zz --------------------------------
   if (V_DUAL_RESET_OPT == 1) {  // ------------------- 1) clean reset
@@ -173,28 +164,29 @@ void DcmeDualUpdate(int zz, DcmeBookkeeping* b, heap* twh) {
   if (Q > 0) {                                                    // top class
     HeapEmpty(twh);                                               // tw reset
     for (j = 0; j < C; j++) HeapPush(twh, j, b->dd[zz * C + j]);  // tw add
-    for (j = 0; j < Q; j++) b->tw[zz * Q + j] = twh->d[j].key;    // tw load
-    qsort(b->tw + zz * Q, Q, sizeof(int), cmp_int);               // tw sort
+    for (j = 0; j < Q; j++) tw[j] = twh->d[j].key;                // tw load
+    qsort(tw, Q, sizeof(int), cmp_int);                           // tw sort
+    NumCopyIntVec(b->tw + zz * Q, tw, Q);
   }
   if (V_MICRO_ME) {
-    NumFillZeroVec(b->uow + zz * N, N);
-    NumFillZeroVec(b->uww + zz * N, N);
+    NumFillZeroVec(ow, N);
+    NumFillZeroVec(ww, N);
     twps = 0;
     for (j = 0, k = 0; j < C; j++) {  // ww, ow: two way merge of tw and ow
       if (j == b->tw[zz * Q + k]) {   // tw
-        NumVecAddCVec(b->uww + zz * N, weight + j * N, b->dd[zz * C + j], N);
+        NumVecAddCVec(ww, weight + j * N, b->dd[zz * C + j], N);
         twps += b->dd[zz * C + j];
         k++;
       } else
-        NumVecAddCVec(b->uow + zz * N, weight + j * N, b->dd[zz * C + j], N);
+        NumVecAddCVec(ow, weight + j * N, b->dd[zz * C + j], N);
     }
-    NumVecAddCVec(b->uww + zz * N, b->uow + zz * N, 1, N);  // ww: adding ow
+    NumVecAddCVec(b->ww + zz * N, b->ow + zz * N, 1, N);  // ww: adding ow
     b->twps[zz] = twps;
-    NumCopyVec(b->ww + zz * N, b->uww + zz * N, N);
-    NumCopyVec(b->ow + zz * N, b->uow + zz * N, N);
+    NumCopyVec(b->ww + zz * N, ww, N);
+    NumCopyVec(b->ow + zz * N, ow, N);
   } else {
-    NumMulVecMat(b->dd + zz * C, weight, C, N, b->uww + zz * N);  // ww
-    NumCopyVec(b->ww + zz * N, b->uww + zz * N, N);
+    NumMulVecMat(b->dd + zz * C, weight, C, N, ww);  // ww
+    NumCopyVec(b->ww + zz * N, ww, N);
   }
   return;
 }
