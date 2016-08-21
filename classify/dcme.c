@@ -30,6 +30,7 @@ typedef struct DcmeBookkeeping {  // each thread worker maintains a bookkeeping
   real* twps;                     // list(K): top w probability sum
   real* ow;                       // list(K):vector(N)
   int* freeze;                    // flag to show if currently being updated
+  int last_updated_zz;
 } DcmeBookkeeping;
 DcmeBookkeeping** blst;
 heap** hlst;
@@ -54,6 +55,10 @@ char* DcmeDualModelDebugInfoStr(DcmeBookkeeping* b) {
     saprintfc(ddis, 'c', 'k', "%.2e", b->ent[k]);
     saprintf(ddis, " ");
   }
+  saprintf(ddis, "\n");
+  for (j = 0; j < Q; j++)
+    saprintf(ddis, "%d:%lf ", b->tw[j],
+             b->dd[b->last_updated_zz * Q + b->tw[j]]);
   free(dps);
   return ddis;
 }
@@ -188,6 +193,7 @@ void DcmeDualUpdate(int zz, DcmeBookkeeping* b, heap* twh) {
     NumMulVecMat(b->dd + zz * C, weight, C, N, ww);  // ww
     NumCopyVec(b->ww + zz * N, ww, N);
   }
+  b->last_updated_zz = zz;
   return;
 }
 
