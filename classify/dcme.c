@@ -60,7 +60,7 @@ char* DcmeDualModelDebugInfoStr(DcmeBookkeeping* b) {
   /* return ddis; */
   int j, k;
   char* ddis = malloc(0x1000);
-  char c1, c2;
+  char c1, c2, b1, b2;
   real eem = NumVecMean(b->ent, K);
   real ees = NumVecStd(b->ent, K);
   sprintfc(ddis, 'g', 'k', "ENT:%.2e\u00b1%.2e", eem, ees);
@@ -69,7 +69,9 @@ char* DcmeDualModelDebugInfoStr(DcmeBookkeeping* b) {
   for (j = 0; j < K; j++) {
     if (j % 10 == 0 && j != 0) saprintf(ddis, "\n");
     c1 = j == b->last_updated_zz ? 'r' : 'y';
+    b1 = j == b->last_updated_zz ? 'b' : 'k';
     c2 = j == b->last_updated_zz ? 'g' : 'c';
+    b2 = j == b->last_updated_zz ? 'b' : 'k';
     k = j;
     saprintfc(
         ddis, c1, 'k', "[%02d]:%.3lf:", k,
