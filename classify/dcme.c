@@ -77,13 +77,12 @@ char* DcmeDualModelDebugInfoStr(DcmeBookkeeping* b) {
     saprintf(ddis, " ");
   }
   saprintf(ddis, "\n");
-
   real dd[QUP];
   for (j = 0; j < Q; j++) dd[j] = b->dd[b->last_updated_zz * Q + b->tw[j]];
   pair* pdd = sorted(dd, Q, 1);
   for (j = 0; j < Q; j++) {
     k = pdd[j].key;
-    saprintf(ddis, "%d:%lf ", b->tw[k],
+    saprintf(ddis, "%d:%.3g ", b->tw[k],
              b->dd[b->last_updated_zz * Q + b->tw[k]]);
   }
   free(pdd);
