@@ -74,9 +74,9 @@ char* DcmeDualModelDebugInfoStr(DcmeBookkeeping* b) {
     b2 = j == b->last_updated_zz ? 'b' : 'k';
     k = j;
     saprintfc(
-        ddis, c1, 'k', "[%02d]:%.3lf:", k,
+        ddis, c1, b1, "[%02d]:%.3lf:", k,
         (double)dcme_dual_update_cnt[k] / (dcme_dual_update_total_cnt + 1));
-    saprintfc(ddis, c2, 'k', "%.2e", b->ent[k]);
+    saprintfc(ddis, c2, b2, "%.2e", b->ent[k]);
     saprintf(ddis, " ");
   }
   saprintf(ddis, "\n");
