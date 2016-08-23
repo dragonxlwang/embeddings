@@ -193,6 +193,7 @@ void vsprintfc(char *str, char fg_color_code, char bg_color_code,
       fg = ANSI_COLOR_LGRAY;
       break;
     default:
+      printf("Error: color code\n");
       exit(1);
   }
   switch (b) {
@@ -221,6 +222,7 @@ void vsprintfc(char *str, char fg_color_code, char bg_color_code,
       bg = ANSI_COLOR_BG_LGRAY;
       break;
     default:
+      printf("Error: color code\n");
       exit(1);
   }
   sprintf(str, "%s%s", fg, bg);
