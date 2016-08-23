@@ -70,7 +70,7 @@ char* DcmeDualModelDebugInfoStr(DcmeBookkeeping* b) {
     if (j % 10 == 0 && j != 0) saprintf(ddis, "\n");
     c1 = j == b->last_updated_zz ? 'k' : 'y';
     b1 = j == b->last_updated_zz ? 'l' : 'k';
-    c2 = j == b->last_updated_zz ? 'k' : 'c';
+    c2 = j == b->last_updated_zz ? 'r' : 'c';
     b2 = j == b->last_updated_zz ? 'l' : 'k';
     k = j;
     saprintfc(
