@@ -281,6 +281,28 @@ void saprintfc(char *str, char fg_color_code, char bg_color_code,
   return;
 }
 
+char *strprogbar(double p, int len, int bar_only) {
+  char *str = malloc(0x1000);
+  int i;
+  int bar = p * len;
+  if (!bar_only) sprintf(str, "[%7.4lf%%]: ", p * 100);  // pct
+  for (i = 0; i < bar; i++) saprintf(str, "+");          // past
+  saprintf(str, "~");                                    // current
+  for (i = bar + 1; i < len; i++) saprintf(str, "=");    // left
+  return str;
+}
+
+char *strprogbarc(double p, int len, int bar_only) {
+  char *str = malloc(0x1000);
+  int i;
+  int bar = p * len;
+  if (!bar_only) sprintfc(str, 'y', 'k', "[%7.4lf%%]: ", p * 100);  // pct
+  for (i = 0; i < bar; i++) saprintfc(str, 'r', 'k', "+");          // past
+  saprintfc(str, 'w', 'k', "~");                                    // current
+  for (i = bar + 1; i < len; i++) saprintfc(str, 'c', 'k', "=");    // left
+  return str;
+}
+
 char *strtime(int s) {
   int ss = s;
   int mm = ss / 60;
