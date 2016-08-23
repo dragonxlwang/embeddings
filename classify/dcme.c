@@ -80,11 +80,13 @@ char* DcmeDualModelDebugInfoStr(DcmeBookkeeping* b) {
     saprintf(ddis, " ");
   }
   saprintf(ddis, "\n");
-  real tp = 0;
-  for (j = 0; j < Q; j++) tp += b->dd[b->last_updated_zz * Q + b->tw[j]];
-  char* pb = strprogbarc(tp, 80, 0);
-  saprintf(ddis, "%s", pb);
-  free(pb);
+
+  /* real tp = 0; */
+  /* for (j = 0; j < Q; j++) tp += b->dd[b->last_updated_zz * Q + b->tw[j]]; */
+  /* char* pb = strprogbarc(tp, 80, 0); */
+  /* saprintf(ddis, "%s", pb); */
+  /* free(pb); */
+
   /* real dd[QUP]; */
   /* for (j = 0; j < Q; j++) dd[j] = b->dd[b->last_updated_zz * Q + b->tw[j]];
    */
