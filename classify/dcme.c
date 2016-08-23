@@ -86,7 +86,7 @@ char* DcmeDualModelDebugInfoStr(DcmeBookkeeping* b) {
   /* char* pb = strprogbarc(tp, 80, 0); */
   /* saprintf(ddis, "%s", pb); */
   saprintf(ddis, "%lf", tp);
-  free(pb);
+  /* free(pb); */
 
   /* real dd[QUP]; */
   /* for (j = 0; j < Q; j++) dd[j] = b->dd[b->last_updated_zz * Q + b->tw[j]];
