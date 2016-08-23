@@ -68,10 +68,10 @@ char* DcmeDualModelDebugInfoStr(DcmeBookkeeping* b) {
   saprintf(ddis, "\n");
   for (j = 0; j < K; j++) {
     if (j % 10 == 0 && j != 0) saprintf(ddis, "\n");
-    c1 = j == b->last_updated_zz ? 'r' : 'y';
-    b1 = j == b->last_updated_zz ? 'b' : 'k';
-    c2 = j == b->last_updated_zz ? 'g' : 'c';
-    b2 = j == b->last_updated_zz ? 'b' : 'k';
+    c1 = j == b->last_updated_zz ? 'k' : 'y';
+    b1 = j == b->last_updated_zz ? 'w' : 'k';
+    c2 = j == b->last_updated_zz ? 'k' : 'c';
+    b2 = j == b->last_updated_zz ? 'w' : 'k';
     k = j;
     saprintfc(
         ddis, c1, b1, "[%02d]:%.3lf:", k,
