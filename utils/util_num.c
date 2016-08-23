@@ -69,6 +69,7 @@ real NUM_EPS = 1e-6;
 
 int NumEqual(real x, real y) { return ABS(x - y) <= NUM_EPS; }
 
+int NumIsNan(real x) { return (x != x); }
 void NumPrintArr(char *name, real *arr, int l) {
   int i = 0;
   char name10[11] = {0};
