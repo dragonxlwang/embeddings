@@ -392,7 +392,7 @@ void DcmePrep() {
     blst[i] = DcmeBookkeepingCreate();
     hlst[i] = HeapCreate(Q);
   }
-  for (i = 0; i < d; j++)
+  for (i = 0; i < d; i++)
     for (k = 0; k < K; k++) DcmeDualUpdate(k, blst[i], hlst[i]);
   return;
 }
