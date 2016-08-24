@@ -63,7 +63,8 @@ char* DcmeDualModelDebugInfoStr(DcmeBookkeeping* b) {
   sprintfc(ddis, 'g', 'k', "ENT:%.2e\u00b1%.2e", eem, ees);
   saprintf(ddis, " ");
   real tp = 0;
-  for (j = 0; j < Q; j++) tp += b->dd[b->last_updated_zz * C + b->tw[j]];
+  for (j = 0; j < Q; j++)
+    tp += b->dd[b->last_updated_zz * C + b->tw[b->last_updated_zz * Q + j]];
   saprintf(ddis, "top probability: %.3e twps: %.3e zz: %d", tp,
            b->twps[b->last_updated_zz], b->last_updated_zz);
   if (NumIsNan(tp)) {
