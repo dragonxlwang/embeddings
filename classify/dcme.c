@@ -62,15 +62,12 @@ char* DcmeDualModelDebugInfoStr(DcmeBookkeeping* b) {
   real ees = NumVecStd(b->ent, K);
   sprintfc(ddis, 'g', 'k', "ENT:%.2e\u00b1%.2e", eem, ees);
   saprintf(ddis, " ");
-  real tp = 0;
-  for (j = 0; j < Q; j++)
-    tp += b->dd[b->last_updated_zz * C + b->tw[b->last_updated_zz * Q + j]];
-  saprintf(ddis, "top probability: %.3e twps: %.3e zz: %d", tp,
-           b->twps[b->last_updated_zz], b->last_updated_zz);
-  if (NumIsNan(tp)) {
+  saprintf(ddis, "twps: %.3e zz: %02d", b->twps[b->last_updated_zz],
+           b->last_updated_zz);
+  if (NumIsNan(b->twps[b->last_updated_zz])) {
     saprintf(ddis, "NAN");
   } else {
-    char* pb = strprogbarc(tp, 80, 0);
+    char* pb = strprogbarc(b->twps[b->last_updated_zz], 80, 0);
     saprintf(ddis, "%s", pb);
     free(pb);
   }
