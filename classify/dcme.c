@@ -212,21 +212,24 @@ void DcmeDualUpdate(int zz, DcmeBookkeeping* b, heap* twh) {
     for (j = 0; j < Q; j++) tw[j] = twh->d[j].key;                // tw load
     qsort(tw, Q, sizeof(int), cmp_int);                           // tw sort
     NumCopyIntVec(b->tw + zz * Q, tw, Q);
+    twps = 0;
+    for (j = 0; j < Q; j++) {
+      k = b->tw[zz * Q + j];
+      twps += b->dd[zz * C + k];
+    }
+    b->twps[zz] = twps;
   }
-  if (V_MICRO_ME) {
+  if (V_MICRO_ME) {  // Q > 0 required
     NumFillZeroVec(ow, N);
     NumFillZeroVec(ww, N);
-    twps = 0;
     for (j = 0, k = 0; j < C; j++) {  // ww, ow: two way merge of tw and ow
       if (j == b->tw[zz * Q + k]) {   // tw
         NumVecAddCVec(ww, weight + j * N, b->dd[zz * C + j], N);
-        twps += b->dd[zz * C + j];
         k++;
       } else
         NumVecAddCVec(ow, weight + j * N, b->dd[zz * C + j], N);
     }
     NumVecAddCVec(b->ww + zz * N, b->ow + zz * N, 1, N);  // ww: adding ow
-    b->twps[zz] = twps;
     NumCopyVec(b->ww + zz * N, ww, N);
     NumCopyVec(b->ow + zz * N, ow, N);
   } else {
