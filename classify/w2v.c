@@ -137,7 +137,8 @@ void *W2vThreadTrain(void *arg) {
     }
     if (feof(fin) || fpos >= fend) {
       fseek(fin, fbeg, SEEK_SET);
-      if (V_CACHE_INTERMEDIATE_WEIGHT)
+      if (V_CACHE_INTERMEDIATE_WEIGHT &&
+          iter_num % V_CACHE_INTERMEDIATE_WEIGHT == 0)
         WeightSave(weight, C, N, iter_num, V_WEIGHT_SAVE_PATH);
       iter_num++;
     }

@@ -37,7 +37,7 @@ int V_VOCAB_HIGH_FREQ_CUTOFF = 0;
 int V_TEXT_LOWER = 1;
 // if remove trailing punctuation
 int V_TEXT_RM_TRAIL_PUNC = 1;
-// if cache weight per iteration
+// if cache weight per V_CACHE_INTERMEDIATE_WEIGHT iteration
 int V_CACHE_INTERMEDIATE_WEIGHT = 0;
 // if overwrite vocab file
 int V_VOCAB_OVERWRITE = 0;
