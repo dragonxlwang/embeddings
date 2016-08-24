@@ -392,8 +392,15 @@ void DcmePrep() {
     blst[i] = DcmeBookkeepingCreate();
     hlst[i] = HeapCreate(Q);
   }
+  LOGCR(2);
   for (i = 0; i < d; i++)
-    for (k = 0; k < K; k++) DcmeDualUpdate(k, blst[i], hlst[i]);
+    for (k = 0; k < K; k++) {
+      LOGCLR(2);
+      LOG(2, "Initializing dual cluster %d @ thread %d", k, i);
+      DcmeDualUpdate(k, blst[i], hlst[i]);
+    }
+  LOGCLR(2);
+  LOG(2, "dual clusters initialized\n");
   return;
 }
 
