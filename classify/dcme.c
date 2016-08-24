@@ -193,7 +193,11 @@ void DcmeDualUpdate(int zz, DcmeBookkeeping* b, heap* twh) {
   NumMulMatVec(weight, b->hh + zz * N, C, N, dd);  // dd
   // -- debug
   if (NumIsNanVec(dd, N)) {
+    printf("\n");
     printf("distribution vector has nan values -- abort \n");
+    if (NumIsNanVec(weight, C * N)) {
+      printf("weight vector has nan values -- abort \n");
+    }
     exit(1);
   }
   // -- debug
