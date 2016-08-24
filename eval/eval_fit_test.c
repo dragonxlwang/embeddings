@@ -94,7 +94,7 @@ void* sid_classify_thread(void* param) {
 
 void EvalMultiThreadClassify(int fitting, real sample_rate, real** acc_ptr_addr,
                              real** prob_ptr_addr) {
-  int i, j;
+  int i, j, k;
   int** assigned_iters = (int**)malloc(V_THREAD_NUM * sizeof(int*));
   int* assigned_num = (int*)malloc(V_THREAD_NUM * sizeof(int));
   for (i = 0; i < V_THREAD_NUM; i++) {
@@ -103,7 +103,8 @@ void EvalMultiThreadClassify(int fitting, real sample_rate, real** acc_ptr_addr,
     assigned_num[i] = 0;
   }
   for (i = 0; i < V_ITER_NUM; i++) {
-    j = i % V_THREAD_NUM;
+    if (i % V_CACHE_INTERMEDIATE_WEIGHT != 0) continue;
+    j = (j + 1) % V_THREAD_NUM;
     assigned_iters[j][assigned_num[j]++] = i;
   }
   int stride = 9;
@@ -133,6 +134,7 @@ void EvalMultiThreadClassify(int fitting, real sample_rate, real** acc_ptr_addr,
   for (i = 0; i < V_THREAD_NUM; i++) pthread_join(pt[i], NULL);
   printf("\n");
   for (i = 0; i < V_ITER_NUM; i++) {
+    if (i % V_CACHE_INTERMEDIATE_WEIGHT != 0) continue;
     printf("iter %3d: accuracy = %6d / %6d = %.6lf probability = %.6lf\n", i,
            correct_ptr[i], total_ptr[i], (real)accuracy_ptr[i],
            (real)probability_ptr[i]);
@@ -164,6 +166,7 @@ int main(int argc, char** argv) {
   FILE* fout = fsopen(rfp, "wb");
   int i;
   for (i = 0; i < V_ITER_NUM; i++) {
+    if (i % V_CACHE_INTERMEDIATE_WEIGHT != 0) continue;
     printf("%lf %lf %lf %lf\n", test_acc[i], test_prob[i], fit_acc[i],
            fit_prob[i]);
     fprintf(fout, "%lf %lf %lf %lf\n", test_acc[i], test_prob[i], fit_acc[i],
