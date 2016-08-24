@@ -360,11 +360,6 @@ void* DcmeThreadTrain(void* arg) {
   int k;
   DcmeBookkeeping* b = blst[tid / V_THREADS_PER_DUAL];
   heap* twh = hlst[tid / V_THREADS_PER_DUAL];
-  for (k = 0; k < K; k++) {  // initialize dual
-    if (!DcmeDualFreeze(k, b)) continue;
-    DcmeDualUpdate(k, b, twh);
-    DcmeDualRelease(k, b);
-  }
   while (iter_num < V_ITER_NUM) {
     HelperReadInstance(fin, vcb, classes, fsv, &fn, &label, V_TEXT_LOWER,
                        V_TEXT_RM_TRAIL_PUNC);
@@ -392,11 +387,13 @@ void DcmePrep() {
   int d = V_THREAD_NUM / V_THREADS_PER_DUAL + 1;
   blst = (DcmeBookkeeping**)malloc(d * sizeof(DcmeBookkeeping*));
   hlst = (heap**)malloc(d * sizeof(heap*));
-  int i;
+  int i, k;
   for (i = 0; i < d; i++) {
     blst[i] = DcmeBookkeepingCreate();
     hlst[i] = HeapCreate(Q);
   }
+  for (i = 0; i < d; j++)
+    for (k = 0; k < K; k++) DcmeDualUpdate(k, blst[i], hlst[i]);
   return;
 }
 
