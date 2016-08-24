@@ -191,7 +191,13 @@ void DcmeDualUpdate(int zz, DcmeBookkeeping* b, heap* twh) {
   int j, k, tw[QUP];
   real ent, twps, dd[CUP], ow[NUP], ww[NUP];
   NumMulMatVec(weight, b->hh + zz * N, C, N, dd);  // dd
-  ent = NumSoftMax(dd, b->hn[zz], C);              // ent (sm)
+  // -- debug
+  if (NumIsNanVec(dd, N)) {
+    printf("distribution vector has nan values -- abort \n");
+    exit(1);
+  }
+  // -- debug
+  ent = NumSoftMax(dd, b->hn[zz], C);  // ent (sm)
   NumCopyVec(b->dd + zz * C, dd, C);
   b->ent[zz] = ent;
   // dual reset distribution (hh and hn) of zz --------------------------------
