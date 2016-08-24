@@ -287,10 +287,10 @@ char *strprogbar(double p, int len, int bar_only) {
   char *str = malloc(0x1000);
   int i;
   int bar = p * len;
-  if (!bar_only) sprintf(str, "[%7.4lf%%]: ", p * 100);  // pct
-  for (i = 0; i < bar; i++) saprintf(str, "+");          // past
-  saprintf(str, "~");                                    // current
-  for (i = bar + 1; i < len; i++) saprintf(str, "=");    // left
+  if (!bar_only) sprintf(str, "[%07.4lf%%]: ", p * 100);  // pct
+  for (i = 0; i < bar; i++) saprintf(str, "+");           // past
+  saprintf(str, "~");                                     // current
+  for (i = bar + 1; i < len; i++) saprintf(str, "=");     // left
   return str;
 }
 
