@@ -218,7 +218,8 @@ void DcmeDualUpdate(int zz, DcmeBookkeeping* b, heap* twh) {
       twps += b->dd[zz * C + k];
     }
     b->twps[zz] = twps;
-    LOG(2, "TWPS: %.3e, zz: %d, b: %ld, blst: %ld\n", twps, zz, &b, blst);
+    for (k = 0; blst[k] != b; k++)
+      LOG(2, "TWPS: %.3e, zz: %d, bpos: %d\n", twps, zz, k);
   }
   if (V_MICRO_ME) {  // Q > 0 required
     NumFillZeroVec(ow, N);
