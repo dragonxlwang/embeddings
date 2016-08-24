@@ -218,14 +218,6 @@ void DcmeDualUpdate(int zz, DcmeBookkeeping* b, heap* twh) {
       twps += b->dd[zz * C + k];
     }
     b->twps[zz] = twps;
-    for (k = 0; blst[k] != b; k++)
-      ;
-    LOG(2, "TWPS: %.3e, zz: %02d, bpos: %02d ", twps, zz, k);
-    for (j = 0; j < Q; j++) {
-      k = b->tw[zz * Q + j];
-      printf("%.2e ", b->dd[zz * C + k]);
-    }
-    printf("\n");
   }
   if (V_MICRO_ME) {  // Q > 0 required
     NumFillZeroVec(ow, N);
