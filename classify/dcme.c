@@ -36,26 +36,6 @@ DcmeBookkeeping** blst;
 heap** hlst;
 
 char* DcmeDualModelDebugInfoStr(DcmeBookkeeping* b) {
-  /* int j, k; */
-  /* char* ddis = malloc(0x1000); */
-  /* real eem = NumVecMean(b->ent, K); */
-  /* real ees = NumVecStd(b->ent, K); */
-  /* pair* dps = sortedi(dcme_dual_update_cnt, K, 1); */
-  /* sprintfc(ddis, 'g', 'k', "ENT:%.2e\u00b1%.2e", eem, ees); */
-  /* saprintf(ddis, " "); */
-  /* saprintf(ddis, "\n"); */
-  /* for (j = 0; j < K; j++) { */
-  /*   if (j % 10 == 0 && j != 0) saprintf(ddis, "\n"); */
-  /*   k = dps[j].key; */
-  /*   saprintfc( */
-  /*       ddis, 'y', 'k', "[%02d]:%.3lf:", k, */
-  /*       (double)dcme_dual_update_cnt[k] / (dcme_dual_update_total_cnt + 1));
-   */
-  /*   saprintfc(ddis, 'c', 'k', "%.2e", b->ent[k]); */
-  /*   saprintf(ddis, " "); */
-  /* } */
-  /* free(dps); */
-  /* return ddis; */
   int j;
   char* ddis = malloc(0x1000);
   real eem = NumVecMean(b->ent, K);
@@ -71,16 +51,6 @@ char* DcmeDualModelDebugInfoStr(DcmeBookkeeping* b) {
     saprintf(ddis, "%s", pb);
     free(pb);
   }
-  /* real dd[QUP]; */
-  /* for (j = 0; j < Q; j++) dd[j] = b->dd[b->last_updated_zz * Q + b->tw[j]];
-   */
-  /* pair* pdd = sorted(dd, Q, 1); */
-  /* for (j = 0; j < Q; j++) { */
-  /*   k = pdd[j].key; */
-  /*   saprintf(ddis, "%d:%.2e ", b->tw[k], */
-  /*            b->dd[b->last_updated_zz * Q + b->tw[k]]); */
-  /* } */
-  /* free(pdd); */
   return ddis;
 }
 
