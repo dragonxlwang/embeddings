@@ -34,8 +34,6 @@ typedef struct DcmeBookkeeping {  // each thread worker maintains a bookkeeping
 } DcmeBookkeeping;
 DcmeBookkeeping** blst;
 heap** hlst;
-int dcme_dual_update_total_cnt = 0;
-int dcme_dual_update_cnt[KUP] = {0};
 
 char* DcmeDualModelDebugInfoStr(DcmeBookkeeping* b) {
   /* int j, k; */
@@ -58,31 +56,15 @@ char* DcmeDualModelDebugInfoStr(DcmeBookkeeping* b) {
   /* } */
   /* free(dps); */
   /* return ddis; */
-  int j, k;
+  int j;
   char* ddis = malloc(0x1000);
-  char c1, c2, b1, b2;
   real eem = NumVecMean(b->ent, K);
   real ees = NumVecStd(b->ent, K);
   sprintfc(ddis, 'g', 'k', "ENT:%.2e\u00b1%.2e", eem, ees);
   saprintf(ddis, " ");
-  saprintf(ddis, "\n");
-  for (j = 0; j < K; j++) {
-    if (j % 10 == 0 && j != 0) saprintf(ddis, "\n");
-    c1 = j == b->last_updated_zz ? 'k' : 'y';
-    b1 = j == b->last_updated_zz ? 'l' : 'k';
-    c2 = j == b->last_updated_zz ? 'r' : 'c';
-    b2 = j == b->last_updated_zz ? 'l' : 'k';
-    k = j;
-    saprintfc(
-        ddis, c1, b1, "[%02d]:%.3lf:", k,
-        (double)dcme_dual_update_cnt[k] / (dcme_dual_update_total_cnt + 1));
-    saprintfc(ddis, c2, b2, "%.2e", b->ent[k]);
-    saprintf(ddis, " ");
-  }
-  saprintf(ddis, "\n");
-
   real tp = 0;
   for (j = 0; j < Q; j++) tp += b->dd[b->last_updated_zz * Q + b->tw[j]];
+  saprintf(ddis, "top probability: %.3e", tp);
   if (NumIsNan(tp)) {
     saprintf(ddis, "NAN");
   } else {
@@ -307,8 +289,6 @@ int DcmeOfflineUpdate(int zz, DcmeBookkeeping* b, heap* twh) {
   if (V_L2_REGULARIZATION_WEIGHT >= 0)
     NumVecMulC(weight, 1 - V_L2_REGULARIZATION_WEIGHT, N * C);
   DcmeDualUpdate(zz, b, twh);
-  dcme_dual_update_total_cnt++;
-  dcme_dual_update_cnt[zz]++;
   DcmeDualRelease(zz, b);
   return 1;
 }
@@ -396,7 +376,7 @@ void DcmePrep() {
   for (i = 0; i < d; i++)
     for (k = 0; k < K; k++) {
       LOGCLR(2);
-      LOG(2, "Initializing dual cluster %d @ thread %d", k, i);
+      LOG(2, "Initializing dual cluster %d @ %d", k, i);
       DcmeDualUpdate(k, blst[i], hlst[i]);
     }
   LOGCLR(2);
