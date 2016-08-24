@@ -36,7 +36,6 @@ DcmeBookkeeping** blst;
 heap** hlst;
 
 char* DcmeDualModelDebugInfoStr(DcmeBookkeeping* b) {
-  int j;
   char* ddis = malloc(0x1000);
   real eem = NumVecMean(b->ent, K);
   real ees = NumVecStd(b->ent, K);
@@ -59,8 +58,7 @@ void DcmeThreadPrintProgBar(int dbg_lvl, int tid, real p, DcmeBookkeeping* b) {
   if (sid_dcme_ppb_lock) return;
   sid_dcme_ppb_lock = 1;
 #ifdef DEBUG
-  /* if (NumRand() > 0.002) { */
-  if (NumRand() > 1) {
+  if (NumRand() > 0.01) {
     sid_dcme_ppb_lock = 0;
     return;
   }
@@ -141,23 +139,7 @@ void DcmeDualUpdate(int zz, DcmeBookkeeping* b, heap* twh) {
   int j, k, tw[QUP];
   real ent, twps, dd[CUP], ow[NUP], ww[NUP];
   NumMulMatVec(weight, b->hh + zz * N, C, N, dd);  // dd
-  // -- debug
-  if (NumIsNanVec(dd, N)) {
-    printf("\n");
-    printf("distribution vector has nan values -- abort \n");
-    if (NumIsNanVec(weight, C * N)) {
-      printf("weight vector has nan values -- abort \n");
-    } else {
-      printf("weight vector looks normal\n");
-      if (NumIsNanVec(b->hh + zz * N, N)) {
-        printf("hh vector has nan values -- abort \n");
-      } else
-        printf("hh vector looks normal\n");
-    }
-    exit(1);
-  }
-  // -- debug
-  ent = NumSoftMax(dd, b->hn[zz], C);  // ent (sm)
+  ent = NumSoftMax(dd, b->hn[zz], C);              // ent (sm)
   NumCopyVec(b->dd + zz * C, dd, C);
   b->ent[zz] = ent;
   // dual reset distribution (hh and hn) of zz --------------------------------
