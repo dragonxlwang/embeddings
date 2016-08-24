@@ -199,6 +199,10 @@ void DcmeDualUpdate(int zz, DcmeBookkeeping* b, heap* twh) {
       printf("weight vector has nan values -- abort \n");
     } else {
       printf("weight vector looks normal\n");
+      if (NumIsNanVec(b->hh + zz * N, N)) {
+        printf("hh vector has nan values -- abort \n");
+      } else
+        printf("hh vector looks normal\n");
     }
     exit(1);
   }
