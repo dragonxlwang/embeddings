@@ -298,10 +298,10 @@ char *strprogbarc(double p, int len, int bar_only) {
   char *str = malloc(0x1000);
   int i;
   int bar = p * len;
-  if (!bar_only) sprintfc(str, 'y', 'k', "[%7.4lf%%]: ", p * 100);  // pct
-  for (i = 0; i < bar; i++) saprintfc(str, 'r', 'k', "+");          // past
-  saprintfc(str, 'w', 'k', "~");                                    // current
-  for (i = bar + 1; i < len; i++) saprintfc(str, 'c', 'k', "=");    // left
+  if (!bar_only) sprintfc(str, 'y', 'k', "[%07.4lf%%]: ", p * 100);  // pct
+  for (i = 0; i < bar; i++) saprintfc(str, 'r', 'k', "+");           // past
+  saprintfc(str, 'w', 'k', "~");                                     // current
+  for (i = bar + 1; i < len; i++) saprintfc(str, 'c', 'k', "=");     // left
   return str;
 }
 
