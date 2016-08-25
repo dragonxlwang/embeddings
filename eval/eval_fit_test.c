@@ -76,7 +76,7 @@ void* sid_classify_thread(void* param) {
   int tid = *((int*)p[i++]);
   for (i = 0; i < assigned_num; i++) {
     j = assigned_iters[i];
-    char* wfp = sformat("%s.part%d", V_WEIGHT_SAVE_PATH, j);
+    char* wfp = sformat("%s.dir/%d.iter", V_WEIGHT_SAVE_PATH, j);
     EvalClassify(wfp, fitting ? V_TRAIN_FILE_PATH : V_TEST_FILE_PATH,
                  correct_ptr + j, total_ptr + j, accuracy_ptr + j,
                  probability_ptr + j, sample_rate, tid);
