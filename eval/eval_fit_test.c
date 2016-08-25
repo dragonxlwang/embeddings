@@ -165,12 +165,13 @@ int main(int argc, char** argv) {
   char* rfp = FilePathSubExtension(V_WEIGHT_SAVE_PATH, "result");
   FILE* fout = fsopen(rfp, "wb");
   int i;
+  printf("\n==============================================\n");
   for (i = 0; i < V_ITER_NUM; i++) {
     if (i % V_CACHE_INTERMEDIATE_WEIGHT != 0) continue;
-    printf("%lf %lf %lf %lf\n", test_acc[i], test_prob[i], fit_acc[i],
+    printf("%d %lf %lf %lf %lf\n", i, test_acc[i], test_prob[i], fit_acc[i],
            fit_prob[i]);
-    fprintf(fout, "%lf %lf %lf %lf\n", test_acc[i], test_prob[i], fit_acc[i],
-            fit_prob[i]);
+    fprintf(fout, " %d %lf %lf %lf %lf\n", i, test_acc[i], test_prob[i],
+            fit_acc[i], fit_prob[i]);
   }
   printf("dump to file: %s\n", rfp);
   fclose(fout);
