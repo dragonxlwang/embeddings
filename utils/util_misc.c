@@ -5,7 +5,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
 #include <time.h>
+#include <unistd.h>
 #include <wordexp.h>
 
 // util_misc.c shall only include system include files
@@ -387,6 +389,16 @@ long int FileSize(char *fp) {
   fclose(fin);
   return fsz;
 }
+
+int direxists(const char *dirname) {
+  struct stat s;
+  if (stat(dirname, &s) == 0 && S_ISDIR(s.st_mode)) return 1;
+  return 0;
+}
+
+int dirmake(const char *dirname) { return mkdir(dirname, 0700); }
+
+int dirdelete(const char *dirname) { return rmdir(dirname); }
 
 /***
  *        #

@@ -7,7 +7,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
-#include <unistd.h>
 #include "../classify/constants.c"
 #include "../utils/util_misc.c"
 #include "../utils/util_num.c"
@@ -20,11 +19,16 @@ real *WeightCreate(int c, int n, real init_amp) {
 }
 
 void WeightSave(real *w, int c, int n, int iter_num, char *fp) {
+  // always rewrite the final model
+  // intermediate models not written if files already exist
   char *mfp;
   if (iter_num == -1) {  // save final model, call by master
     mfp = sclone(fp);    // so that free(mfp) can work
   } else {               // avoid thread racing
-    mfp = sformat("%s.part%d", fp, iter_num);
+    char *mdp = sformat("%s.dir", fp);
+    if (!direxists(mdp)) dirmake(mdp);
+    mfp = sformat("%s/%d.iter", mdp, iter_num);
+    free(mdp);
     if (fexists(mfp)) return;
   }
   FILE *fout = fopen(mfp, "wb");
