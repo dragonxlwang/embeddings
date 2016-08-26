@@ -219,7 +219,7 @@ void DcmeMicroME(int zz, int label, int* fsv, int fn, DcmeBookkeeping* b) {
 
 int DcmeDualFreeze(int zz, DcmeBookkeeping* b) {
   int i = 0;
-  for (i = 0; i < 5e3; i++)
+  for (i = 0; i < 5e2; i++)
     if (b->freeze[zz]) return 0;
   b->freeze[zz] = 1;
   return 1;
@@ -290,7 +290,6 @@ void* DcmeThreadTrain(void* arg) {
   int iter_num = 0;
   fseek(fin, fbeg, SEEK_SET);  // training
   ///////////////////////////////////////////////////////////////////////////
-  int k;
   DcmeBookkeeping* b = blst[tid / V_THREADS_PER_DUAL];
   heap* twh = hlst[tid / V_THREADS_PER_DUAL];
   while (iter_num < V_ITER_NUM) {
