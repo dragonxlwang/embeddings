@@ -888,8 +888,8 @@ dcme_7i=" \
   V_ITER_NUM 1000"
 
 dcme_test=" \
-  V_WEIGHT_DECOR_FILE_PATH dcme_gd-1e-4_N-30K_K-20_Q-10_sd \
-  V_INIT_GRAD_DESCENT_STEP_SIZE 1e-4 \
+  V_WEIGHT_DECOR_FILE_PATH dcme_gd-1e-3_N-30K_K-20_Q-10_sd \
+  V_INIT_GRAD_DESCENT_STEP_SIZE 1e-3 \
   N 30000 \
   K 20 \
   Q 10 \
