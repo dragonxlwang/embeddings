@@ -889,7 +889,7 @@ dcme_7i=" \
 
 dcme_test=" \
   V_WEIGHT_DECOR_FILE_PATH dcme_gd-1e-4_N-30K_K-20_Q-10_sd \
-  V_INIT_GRAD_DESCENT_STEP_SIZE 1e-3 \
+  V_INIT_GRAD_DESCENT_STEP_SIZE 1e-4 \
   N 30000 \
   K 20 \
   Q 10 \
