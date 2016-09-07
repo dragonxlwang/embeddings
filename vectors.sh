@@ -218,9 +218,9 @@ dcme_4=" \
   V_VOCAB_HIGH_FREQ_CUTOFF 0 \
   V_MODEL_PROJ_BALL_NORM 1e2 \
   V_CACHE_INTERMEDIATE_MODEL 1 \
-  V_ITER_NUM 100" \
+  V_ITER_NUM 100"
 
-  # 5.59 %   Semantic accuracy: 6.87 %   Syntactic accuracy: 5.18 %
+# 5.59 %   Semantic accuracy: 6.87 %   Syntactic accuracy: 5.18 %
 # PEEK:6.02e-03
 # PEEK:2.00e-02
 # 0.017287 %   Semantic accuracy: 0.016449 %   Syntactic accuracy: 0.017556 %
