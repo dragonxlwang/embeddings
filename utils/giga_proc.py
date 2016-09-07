@@ -7,10 +7,18 @@ import math
 
 giga_path = os.path.join(os.path.expanduser('~'), 'data/gigaword')
 nyt_path = os.path.join(giga_path, 'gigaword_eng_5_d2/data/nyt_eng/')
+wpb_path = os.path.join(giga_path, 'gigaword_eng_5_d2/data/wpb_eng/')
 PUNCTUATION = set([';', ':', ',', '.', '!', '?', "``", "''", "`", "\"", "'"])
 
-dump_file_name = 'giga_nyt.txt'
-voc_file_name = 'giga_nyt.vcb'
+# dirpath = nyt_path
+# matchstr=r'nyt_eng_\d+\.gz'
+# dump_file_name = 'giga_nyt.txt'
+# voc_file_name = 'giga_nyt.vcb'
+
+dirpath = wpb_path
+matchstr = r'wpb_eng_\d+\.gz'
+dump_file_name = 'giga_wpb.txt'
+voc_file_name = 'giga_wpb.vcb'
 
 
 def single_process_work(args):
@@ -19,14 +27,14 @@ def single_process_work(args):
     unigram = {}
     max_file_num = -1   # -1: no cap
     fn = 0
-    flst = sorted(os.listdir(nyt_path))[beg:end]
+    flst = sorted(os.listdir(dirpath))[beg:end]
     for f in flst:
         fn += 1
         if(max_file_num >= 0 and fn > max_file_num):
             break
-        if(not re.match(r'nyt_eng_\d+\.gz', f)):
+        if(not re.match(matchstr, f)):
             continue
-        fp = os.path.join(nyt_path, f)
+        fp = os.path.join(dirpath, f)
         print('[giga_proc]: reading file {0} {1}-{2}'.format(fp, beg, end))
         t = gigaword.read_file(fp)
         for d in t:
@@ -55,7 +63,7 @@ def single_process_work(args):
 
 def main():
     pn = 20
-    flst = os.listdir(nyt_path)
+    flst = os.listdir(dirpath)
     arglst = []
     for i in range(pn):
         beg = int(math.ceil(float(len(flst)) / pn * i))
