@@ -60,7 +60,8 @@ w2v_1=" \
   V_TRAIN_METHOD w2v \
   V_INIT_GRAD_DESCENT_STEP_SIZE 1e-2 \
   V_NCE 0 \
-  V_NS_WRH 1 "
+  V_NS_WRH 1 \
+  V_CACHE_INTERMEDIATE_MODEL 10"
 
 # 47.41 %   Semantic accuracy: 32.52 %   Syntactic accuracy: 52.08 %
 # PEEK:1.72e-03
