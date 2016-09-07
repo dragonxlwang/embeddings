@@ -125,5 +125,5 @@ def lowercase_vcb_file():
             fout.write('{0} {1}\n'.format(unigram[w], w))
 
 if __name__ == '__main__':
-    # main()
-    lowercase_vcb_file()
+    main()
+    # lowercase_vcb_file()
