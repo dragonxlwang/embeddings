@@ -35,13 +35,12 @@ int main(int argc, char** argv) {
       char* mfp = sformat("%s.dir/%d.iter", V_MODEL_SAVE_PATH, i);
       if (!fexists(mfp)) continue;
       model = ModelLoad(mfp);
-      free(mfp);
       p = PeekLoad(mfp, vcb);
       avgp = PeekEval(model, p, C, V_THREAD_NUM);
       LOGC(0, 'c', 'r', "iter=%02d, \nPEEK:%.2e\n", i, avgp);
+      free(mfp);
     }
   } else {
-    printf("%s\n", file_path);
     p = PeekLoad(file_path, vcb);
     avgp = PeekEval(model, p, C, V_THREAD_NUM);  // multithread
     LOGC(0, 'c', 'r', "\nPEEK:%.2e\n", avgp);
