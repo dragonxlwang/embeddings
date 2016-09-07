@@ -539,6 +539,13 @@ dcme_37=" \
   Q 0 \
   V_ADJUST_WW 2"
 
+dcme_38=" \
+  V_MODEL_DECOR_FILE_PATH dcme_gd-1e-4_nc \
+  V_TRAIN_METHOD dcme \
+  V_INIT_GRAD_DESCENT_STEP_SIZE 1e-4 \
+  V_VOCAB_HIGH_FREQ_CUTOFF 0 \
+  V_CACHE_INTERMEDIATE_MODEL 10"
+
 w2v_13=" \
   V_MODEL_DECOR_FILE_PATH w2v_gd-5e-2_ns_wrh_nc \
   V_TRAIN_METHOD w2v \
