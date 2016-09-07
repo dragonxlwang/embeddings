@@ -102,6 +102,16 @@ Model *ModelLoad(char *fp) {
   }
   LOGC(1, 'c', 'k', "[MODEL]: Load model from %s\n", fp);
   LOGC(1, 'c', 'k', "[MODEL]: Model V = %d, N = %d\n", model->v, model->n);
+  real scr = NumVecNorm(model->scr, model->v * model->n);
+  real ss = NumMatMaxRowNorm(model->scr, model->v, model->n);
+  real tar = NumVecNorm(model->tar, model->v * model->n);
+  real tt = NumMatMaxRowNorm(model->tar, model->v, model->n);
+  LOG(2, "SCR:%.2e=%.2e*", scr, scr / ss);  // scr
+  LOGC(0, 'r', 'k', "%.2e", ss);            // ss
+  LOG(2, " ");                              //
+  LOG(2, "TAR=%.2e=%.2e*", tar, tar / tt);  // tar
+  LOGC(2, 'r', 'k', "%.2e", tt);            // tt
+  LOGCR(2);
   return model;
 }
 
