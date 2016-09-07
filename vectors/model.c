@@ -53,8 +53,8 @@ void ModelSave(Model *model, int iter_num, char *fp) {
     mfp = sclone(fp);    // so that free(mfp) can work
   } else {               // avoid thread racing
     char *mdp = sformat("%s.dir", fp);
-    if(!direxists(mdp)) dirmake(mdp);
-    mfp = sformat("%s/%d.part", mdp, iter_num);
+    if (!direxists(mdp)) dirmake(mdp);
+    mfp = sformat("%s/%d.iter", mdp, iter_num);
     free(mdp);
     if (fexists(mfp)) return;
   }

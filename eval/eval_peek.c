@@ -22,14 +22,28 @@ int main(int argc, char** argv) {
       V_TEXT_FILE_PATH, sformat("l%dr%ds%.2e.lok", V_TEXT_LOWER,
                                 V_TEXT_RM_TRAIL_PUNC, sample_rate));
   PeekSet* p;
+  real avgp;
   if (!fexists(file_path) || overwrite) {
     p = PeekBuild(V_TEXT_FILE_PATH, V_TEXT_LOWER, V_TEXT_RM_TRAIL_PUNC,
                   sample_rate, top_k, vcb, V_THREAD_NUM);
     PeekSave(file_path, vcb, p);
     PeekSetFree(p);
   }
-  p = PeekLoad(file_path, vcb);
-  real avgp = PeekEval(model, p, C, V_THREAD_NUM);
-  LOGC(0, 'c', 'r', "\nPEEK:%.2e\n", avgp);
+  int i;
+  if (V_CACHE_INTERMEDIATE_MODEL) {
+    for (i = 0; i < V_ITER_NUM; i++) {
+      char* mfp = sformat("%s.dir/%d.iter", V_MODEL_SAVE_PATH, i);
+      if (!fexists(mfp)) continue;
+      model = ModelLoad(mfp);
+      free(mfp);
+      p = PeekLoad(mfp, vcb);
+      avgp = PeekEval(model, p, C, V_THREAD_NUM);
+      LOGC(0, 'c', 'r', "iter=%02d, \nPEEK:%.2e\n", i, avgp);
+    }
+  } else {
+    p = PeekLoad(file_path, vcb);
+    avgp = PeekEval(model, p, C, V_THREAD_NUM);  // multithread
+    LOGC(0, 'c', 'r', "\nPEEK:%.2e\n", avgp);
+  }
   VariableFree();
 }
