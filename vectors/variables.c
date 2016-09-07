@@ -21,8 +21,10 @@ char *V_TEXT_FILE_PATH = "~/data/gigaword/giga_nyt.txt";  // "text8/text8"
 char *V_VOCAB_FILE_PATH = NULL;  // don't set it if can be inferred from above
 char *V_MODEL_SAVE_PATH = NULL;
 char *V_PEEK_FILE_PATH = NULL;
+
 int V_THREAD_NUM = 20;
 int V_ITER_NUM = 10;
+
 // Initial grad descent step size
 real V_INIT_GRAD_DESCENT_STEP_SIZE = 1e-4;
 // Model Shrink: l-2 regularization:
@@ -72,6 +74,7 @@ int V_NS_WRH = 1;
 real V_NS_POWER = 0.75;
 int V_NS_NEG = 5;
 int V_NCE = 0;
+int V_NSME = 0;
 
 // ---------------------------- global variables ------------------------------
 Vocabulary *vcb;        // vocabulary
@@ -341,6 +344,12 @@ void VariableInit(int argc, char **argv) {
     c = (i == -1) ? 'w' : 'r';
     if (i != -1) V_NCE = atoi(argv[i + 1]);
     LOGC(1, c, 'k', "Use Negative Contrastive Estimation ------------- : %d\n",
+         V_NCE);
+
+    i = getoptpos("V_NSME", argc, argv);
+    c = (i == -1) ? 'w' : 'r';
+    if (i != -1) V_NSME = atoi(argv[i + 1]);
+    LOGC(1, c, 'k', "Use Maximum Entropy ----------------------------- : %d\n",
          V_NCE);
   }
 

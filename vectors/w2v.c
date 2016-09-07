@@ -27,7 +27,7 @@ void W2vThreadPrintProgBar(int dbg_lvl, int tid, real p) {
   if (sid_w2v_ppb_lock) return;
   sid_w2v_ppb_lock = 1;
 #ifdef DEBUG
-  if (NumRand() > 0.002) {
+  if (NumRand() > 0.01) {
     sid_w2v_ppb_lock = 0;
     return;
   }
@@ -99,6 +99,8 @@ void W2vNegSampleFree() {
 void W2vUpdate(int *ids, int l, unsigned long *rs) {
   int i, j, k, lt, rt, md, h0n = 0, label;
   real h0[NUP], h[NUP], hw[SUP], wd[NUP * SUP], w0[NUP], w[NUP], f;
+  int samp[QUP];
+  real prob[QUP];
   int window = C;  // int window = NumRand() * C + 1;
   NumFillZeroVec(h0, N);
   NumFillZeroVec(w0, N);
@@ -122,18 +124,38 @@ void W2vUpdate(int *ids, int l, unsigned long *rs) {
     NumAddCVecDVec(h0, model->scr + ids[md] * N, hw[md], -hw[md], N, h);  // h
     ///////////////////////////////////////////////////////////////////////////
     NumFillZeroVec(wd + i * N, N);  // wd
-    for (j = 0; j <= V_NS_NEG; j++) {
-      k = (j == 0) ? ids[i] : W2vNegSample(rs);
-      label = (j == 0) ? 1 : 0;
-      if (V_NCE)  // NCE
-        f = NumSigmoid(NumVecDot(h, model->tar + k * N, N) -
-                       w2v_neg_prob_log[k]);
-      else  // NS
-        f = NumSigmoid(NumVecDot(h, model->tar + k * N, N));
-      NumVecAddCVec(wd + i * N, model->tar + k * N, label - f, N);
-      ModelGradUpdate(model, 1, k, -(label - f) * gd_ss, h);  // up m->tar
-      ModelVecRegularize(model, 1, k, V_MODEL_PROJ_BALL_NORM,
-                         V_L2_REGULARIZATION_WEIGHT);
+    if (!V_NSME) {
+      for (j = 0; j <= V_NS_NEG; j++) {
+        k = (j == 0) ? ids[i] : W2vNegSample(rs);
+        label = (j == 0) ? 1 : 0;
+        if (V_NCE)  // NCE
+          f = NumSigmoid(NumVecDot(h, model->tar + k * N, N) -
+                         w2v_neg_prob_log[k]);
+        else  // NS
+          f = NumSigmoid(NumVecDot(h, model->tar + k * N, N));
+        NumVecAddCVec(wd + i * N, model->tar + k * N, label - f, N);
+        ModelGradUpdate(model, 1, k, -(label - f) * gd_ss, h);  // up m->tar
+        ModelVecRegularize(model, 1, k, V_MODEL_PROJ_BALL_NORM,
+                           V_L2_REGULARIZATION_WEIGHT);
+      }
+    } else {
+      for (j = 0; j <= V_NS_NEG; j++) {
+        k = (j < V_NS_NEG) ? W2vNegSample(rs) : ids[i];
+        samp[j] = k;
+        if (V_NCE)  // NCE
+          prob[j] = NumVecDot(h, model->tar + k * N, N) - w2v_neg_prob_log[k];
+        else  // NS
+          prob[j] = NumVecDot(h, model->tar + k * N, N);
+      }
+      NumSoftMax(prob, 1, V_NS_NEG + 1);
+      for (j = 0; j <= V_NS_NEG; j++) {
+        k = samp[j];
+        f = (k == ids[i]) ? 1 : 0 - prob[j];
+        NumVecAddCVec(wd + i * N, model->tar + k * N, f, N);
+        ModelGradUpdate(model, 1, k, -f * gd_ss, h);
+        ModelVecRegularize(model, 1, k, V_MODEL_PROJ_BALL_NORM,
+                           V_L2_REGULARIZATION_WEIGHT);
+      }
     }
     ///////////////////////////////////////////////////////////////////////////
     lt = i - 2 * window - 1;
@@ -190,7 +212,8 @@ void *W2vThreadTrain(void *arg) {
     }
     if (feof(fin) || fpos >= fend) {
       fseek(fin, fbeg, SEEK_SET);
-      if (V_CACHE_INTERMEDIATE_MODEL)
+      if (V_CACHE_INTERMEDIATE_MODEL &&
+          iter_num % V_CACHE_INTERMEDIATE_MODEL == 0)
         ModelSave(model, iter_num, V_MODEL_SAVE_PATH);
       iter_num++;
     }

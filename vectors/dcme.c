@@ -25,35 +25,31 @@ typedef struct DcmeBookkeeping {  // each thread worker maintains a bookkeeping
   real* ww;                       // list(K):vector(N) W * dd, synthesis word
   real* hh;                       // list(K):vector(N) avg(h_k)
   real* hi;                       // list(K):vector(V)
-  int* hn;                        // list(K): |h_k|
+  real* hn;                       // list(K): |h_k|
   int* tw;                        // list(K):list(Q) top words
   real* twps;                     // list(K): top words probability sum
   real* ow;                       // list(K):vector(N)
+  int last_updated_zz;
 } DcmeBookkeeping;
-int dcme_dual_update_total_cnt = 0;
-int dcme_dual_update_cnt[KUP] = {0};
 
 char* DcmeDualModelDebugInfoStr(DcmeBookkeeping* b) {
-  int j, k;
   char* ddis = malloc(0x1000);
   real eem = NumVecMean(b->ent, K);
   real ees = NumVecStd(b->ent, K);
-  real avgp = PeekEvalSingleThread(model, ps, C);
-  pair* dps = sortedi(dcme_dual_update_cnt, K, 1);
+  real avgp = PeekEvalSingleThread(model, ps, C);  // classify only
   sprintfc(ddis, 'g', 'k', "ENT:%.2e\u00b1%.2e", eem, ees);
   saprintf(ddis, " ");
   saprintfc(ddis, 'c', 'r', "PEEK:%.2e", avgp);
-  saprintf(ddis, "\n");
-  for (j = 0; j < K; j++) {
-    if (j % 10 == 0 && j != 0) saprintf(ddis, "\n");
-    k = dps[j].key;
-    saprintfc(
-        ddis, 'y', 'k', "[%02d]:%.3lf:", k,
-        (double)dcme_dual_update_cnt[k] / (dcme_dual_update_total_cnt + 1));
-    saprintfc(ddis, 'c', 'k', "%.2e", b->ent[k]);
-    saprintf(ddis, " ");
+  saprintf(ddis, " ");
+  saprintf(ddis, "twps: %.3e zz: %02d", b->twps[b->last_updated_zz],
+           b->last_updated_zz);
+  if (NumIsNan(b->twps[b->last_updated_zz])) {
+    saprintf(ddis, "NAN");
+  } else {
+    char* pb = strprogbarc(b->twps[b->last_updated_zz], 80, 0);
+    saprintf(ddis, "%s", pb);
+    free(pb);
   }
-  free(dps);
   return ddis;
 }
 
@@ -62,7 +58,7 @@ void DcmeThreadPrintProgBar(int dbg_lvl, int tid, real p, DcmeBookkeeping* b) {
   if (sid_dcme_ppb_lock) return;
   sid_dcme_ppb_lock = 1;
 #ifdef DEBUG
-  if (NumRand() > 0.1) {
+  if (NumRand() > 0.01) {
     sid_dcme_ppb_lock = 0;
     return;
   }
@@ -74,15 +70,16 @@ void DcmeThreadPrintProgBar(int dbg_lvl, int tid, real p, DcmeBookkeeping* b) {
   if (V_MODEL_DECOR_FILE_PATH) LOG(dbg_lvl, "[%s]: ", V_MODEL_DECOR_FILE_PATH);
   LOG(dbg_lvl, "%s", mdis);
   LOG(dbg_lvl, " ");
-  LOG(dbg_lvl, "%s", ddis);
+  LOG(dbg_lvl, "%s", ddis)
   LOGCR(dbg_lvl);
+  free(mdis);
   free(ddis);
 #else
   LOGCR(dbg_lvl);
   if (V_MODEL_DECOR_FILE_PATH) LOG(dbg_lvl, "[%s]: ", V_MODEL_DECOR_FILE_PATH);
   LOG(dbg_lvl, "%s", mdis);
-#endif
   free(mdis);
+#endif
 #else
   char* mdis =
       ModelDebugInfoStr(model, p, tid, start_clock_t, V_THREAD_NUM, gd_ss);
@@ -102,12 +99,12 @@ DcmeBookkeeping* DcmeBookkeepingCreate() {
   b->ww = NumNewHugeVec(N * K);
   b->hh = NumNewHugeVec(N * K);
   b->hi = NumNewHugeVec(V * K);
-  b->hn = NumNewHugeIntVec(K);
+  b->hn = NumNewHugeVec(K);
   b->tw = NumNewHugeIntVec(Q * K);
   b->twps = NumNewHugeVec(K);
   b->ow = NumNewHugeVec(N * K);
   NumRandFillVec(b->hh, N * K, -model_init_amp, model_init_amp);
-  NumFillValIntVec(b->hn, K, 1);
+  NumFillValVec(b->hn, K, 1);
   return b;
 }
 
@@ -144,33 +141,7 @@ void DcmeDualUpdate(int zz, DcmeBookkeeping* b, heap* twh) {
   int j, k;
   NumMulMatVec(model->tar, b->hh + zz * N, V, N, b->dd + zz * V);  // dd
   b->ent[zz] = NumSoftMax(b->dd + zz * V, b->hn[zz], V);           // ent (sm)
-  if (Q > 0) {                                                     // top words
-    HeapEmpty(twh);                                                // tw reset
-    for (j = 0; j < V; j++) HeapPush(twh, j, b->dd[zz * V + j]);   // tw add
-    for (j = 0; j < Q; j++) b->tw[zz * Q + j] = twh->d[j].key;     // tw load
-    qsort(b->tw + zz * Q, Q, sizeof(int), cmp_int);                // tw sort
-  }
-  if (V_MICRO_ME) {
-    NumFillZeroVec(b->ow + zz * N, N);
-    NumFillZeroVec(b->ww + zz * N, N);
-    b->twps[zz] = 0;
-    for (j = 0, k = 0; j < V; j++) {  // ww, ow: two way merge of tw and ow
-      if (j == b->tw[zz * Q + k]) {   // tw
-        NumVecAddCVec(b->ww + zz * N, model->tar + j * N, b->dd[zz * V + j], N);
-        b->twps[zz] += b->dd[zz * V + j];
-        k++;
-      } else
-        NumVecAddCVec(b->ow + zz * N, model->tar + j * N, b->dd[zz * V + j], N);
-    }
-    NumVecAddCVec(b->ww + zz * N, b->ow + zz * N, 1, N);  // ww: adding ow
-  } else {
-    NumMulVecMat(b->dd + zz * V, model->tar, V, N, b->ww + zz * N);  // ww
-  }
-  return;
-}
-
-void DcmeDualReset(int zz, DcmeBookkeeping* b) {
-  // dual reset distribution (hh and hn) of zz
+  // dual reset distribution (hh and hn) of zz --------------------------------
   if (V_DUAL_RESET_OPT == 1) {  // ------------------- 1) clean reset
     b->hn[zz] = 0;
     if (V_DUAL_HI)
@@ -191,11 +162,38 @@ void DcmeDualReset(int zz, DcmeBookkeeping* b) {
     else
       NumVecMulC(b->hh + zz * N, v, N);
   }  // ---------------------------------------------- 4) no reset
+  // --------------------------------------------------------------------------
+  if (Q > 0) {                                                    // top words
+    HeapEmpty(twh);                                               // tw reset
+    for (j = 0; j < V; j++) HeapPush(twh, j, b->dd[zz * V + j]);  // tw add
+    for (j = 0; j < Q; j++) b->tw[zz * Q + j] = twh->d[j].key;    // tw load
+    qsort(b->tw + zz * Q, Q, sizeof(int), cmp_int);               // tw sort
+    b->twps[zz] = 0;
+    for (j = 0; j < Q; j++) {
+      k = b->tw[zz * Q + j];
+      b->twps[zz] += b->dd[zz * V + k];
+    }
+  }
+  if (V_MICRO_ME) {
+    NumFillZeroVec(b->ow + zz * N, N);
+    NumFillZeroVec(b->ww + zz * N, N);
+    for (j = 0, k = 0; j < V; j++) {  // ww, ow: two way merge of tw and ow
+      if (j == b->tw[zz * Q + k]) {   // tw
+        NumVecAddCVec(b->ww + zz * N, model->tar + j * N, b->dd[zz * V + j], N);
+        k++;
+      } else
+        NumVecAddCVec(b->ow + zz * N, model->tar + j * N, b->dd[zz * V + j], N);
+    }
+    NumVecAddCVec(b->ww + zz * N, b->ow + zz * N, 1, N);  // ww: adding ow
+  } else {
+    NumMulVecMat(b->dd + zz * V, model->tar, V, N, b->ww + zz * N);  // ww
+  }
+  b->last_updated_zz = zz;
   return;
 }
 
 void DcmeMicroME(int zz, int ii, real* h, real* wd, DcmeBookkeeping* b) {
-  int j, k, twlen, tw[QUP];
+  int j, k, tw[QUP], twlen;
   real twps, twp[QUP];
   twlen = Q + 1;
   twps = b->twps[zz];
@@ -241,9 +239,6 @@ void DcmeOfflineUpdate(int zz, DcmeBookkeeping* b, heap* twh) {
   if (V_L2_REGULARIZATION_WEIGHT >= 0)  // optional model shrink
     ModelShrink(model, V_L2_REGULARIZATION_WEIGHT);
   DcmeDualUpdate(zz, b, twh);  // dual update based on hh and hn
-  DcmeDualReset(zz, b);        // reset hh and hn
-  dcme_dual_update_total_cnt++;
-  dcme_dual_update_cnt[zz]++;
   return;
 }
 
@@ -291,7 +286,7 @@ int DcmeUpdate(int* ids, int l, DcmeBookkeeping* b, heap* twh) {
         if (k >= 0 && k < l && k != i) b->hi[zz * V + ids[k]] += hw[i];
     } else
       NumVecAddCVec(b->hh + zz * N, h, 1.0, N);  // b->hh
-    b->hn[zz]++;                                 // b->hn
+    b->hn[zz] += 1;                              // b->hn
     if (V_MICRO_ME) {                            // micro ME
       DcmeMicroME(zz, ids[i], h, wd + i * N, b);
     } else {
@@ -361,7 +356,6 @@ void* DcmeThreadTrain(void* arg) {
   heap* twh = HeapCreate(Q);
   for (k = 0; k < K; k++) {  // initialize dual
     DcmeDualUpdate(k, b, twh);
-    DcmeDualReset(k, b);
   }
   while (iter_num < V_ITER_NUM) {
     wnum = TextReadSent(fin, vcb, wids, V_TEXT_LOWER, V_TEXT_RM_TRAIL_PUNC, 1);
@@ -374,7 +368,8 @@ void* DcmeThreadTrain(void* arg) {
     }
     if (feof(fin) || fpos >= fend) {
       fseek(fin, fbeg, SEEK_SET);
-      if (V_CACHE_INTERMEDIATE_MODEL)
+      if (V_CACHE_INTERMEDIATE_MODEL &&
+          iter_num % V_CACHE_INTERMEDIATE_MODEL == 0)
         ModelSave(model, iter_num, V_MODEL_SAVE_PATH);
       iter_num++;
     }

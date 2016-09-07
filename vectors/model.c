@@ -52,7 +52,10 @@ void ModelSave(Model *model, int iter_num, char *fp) {
   if (iter_num == -1) {  // save final model, call by master
     mfp = sclone(fp);    // so that free(mfp) can work
   } else {               // avoid thread racing
-    mfp = sformat("%s.part%d", fp, iter_num);
+    char *mdp = sformat("%s.dir", fp);
+    if(!direxists(mdp)) dirmake(mdp);
+    mfp = sformat("%s/%d.part", mdp, iter_num);
+    free(mdp);
     if (fexists(mfp)) return;
   }
   FILE *fout = fopen(mfp, "wb");
