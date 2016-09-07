@@ -70,7 +70,7 @@ void DcmeThreadPrintProgBar(int dbg_lvl, int tid, real p, DcmeBookkeeping* b) {
   if (V_MODEL_DECOR_FILE_PATH) LOG(dbg_lvl, "[%s]: ", V_MODEL_DECOR_FILE_PATH);
   LOG(dbg_lvl, "%s", mdis);
   LOG(dbg_lvl, " ");
-  LOG(dbg_lvl, "%s", ddis)
+  LOG(dbg_lvl, "%s", ddis);
   LOGCR(dbg_lvl);
   free(mdis);
   free(ddis);
