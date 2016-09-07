@@ -101,7 +101,7 @@ Model *ModelLoad(char *fp) {
     exit(1);
   }
   LOGC(1, 'c', 'k', "[MODEL]: Load model from %s\n", fp);
-  LOGC(1, 'c', 'k', "[MODEL]: Model V = %d, N = %d\n", model->v, model->n);
+  LOGC(1, 'c', 'k', "[MODEL]: Model V = %d, N = %d ", model->v, model->n);
   real scr = NumVecNorm(model->scr, model->v * model->n);
   real ss = NumMatMaxRowNorm(model->scr, model->v, model->n);
   real tar = NumVecNorm(model->tar, model->v * model->n);
