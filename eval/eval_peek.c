@@ -31,6 +31,8 @@ int main(int argc, char** argv) {
   }
   int i;
   if (V_CACHE_INTERMEDIATE_MODEL) {
+    char* dump_file_path = FilePathSubExtension(V_MODEL_SAVE_PATH, "result");
+    FILE* dump_file = fsopen(dump_file_path, "wb");
     for (i = 0; i < V_ITER_NUM; i++) {
       char* mfp = sformat("%s.dir/%d.iter", V_MODEL_SAVE_PATH, i);
       if (!fexists(mfp)) continue;
@@ -38,8 +40,11 @@ int main(int argc, char** argv) {
       free(mfp);
       p = PeekLoad(file_path, vcb);
       avgp = PeekEval(model, p, C, V_THREAD_NUM);
-      LOGC(0, 'c', 'r', "iter=%02d, \nPEEK:%.2e\n", i, avgp);
+      LOGC(0, 'c', 'r', "iter=%02d, PEEK:%.2e\n", i, avgp);
+      fprintf(dump_file, "%d %lf\n", i, avgp);
     }
+    fclose(dump_file);
+    free(dump_file_path);
   } else {
     p = PeekLoad(file_path, vcb);
     avgp = PeekEval(model, p, C, V_THREAD_NUM);  // multithread
