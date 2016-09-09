@@ -72,7 +72,7 @@ int Q = 10;  // Number of top words in online update
 // ----------------------------- W2V specific --------------------------------
 int V_NS_WRH = 1;
 real V_NS_POWER = 0.75;
-int V_NS_NEG = 5;
+int V_NS_NEG = 20;
 int V_NCE = 0;
 int V_NSME = 0;
 

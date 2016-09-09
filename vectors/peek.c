@@ -254,10 +254,11 @@ real sid_peek_eval(Model *m, PeekSet *ps, int c, int beg, int end, int *pn,
                    int *npass) {
   // evaluate on peek set
   // to speed up, we constrain competitive target words from top 10k words
+  // evaluation on perplexity
   int i, j, k, s, lt, rt, md, tpass = 0;
   int *ids, l, h0n;
   real *p = (real *)malloc(ps->top_k * sizeof(real));
-  real h0[NUP], h[NUP], hw, avgp = 0;
+  real h0[NUP], h[NUP], hw, all = 0;
   *pn = 0;
   for (i = beg; i < end; i++) {
     tpass++;
@@ -296,14 +297,14 @@ real sid_peek_eval(Model *m, PeekSet *ps, int c, int beg, int end, int *pn,
         for (s = 0; s < ps->top_k; s++)
           p[s] = NumVecDot(h, m->tar + ps->top_w[s] * m->n, m->n);
         NumSoftMax(p, 1, ps->top_k);
-        avgp += p[k];
+        all -= log(p[k]);
         (*pn)++;
       }
     }
   }
-  avgp /= (*pn);
+  all /= (*pn);
   free(p);
-  return avgp;
+  return all;
 }
 
 void *sid_peek_eval_thread(void *param) {
@@ -359,7 +360,7 @@ real PeekEval(Model *m, PeekSet *ps, int c, int thread_num) {
   free(end);
   free(avgp);
   free(pt);
-  return prob / num;
+  return exp(prob / num);
 }
 
 real PeekEvalSingleThread(Model *m, PeekSet *ps, int c) {
