@@ -8,7 +8,7 @@ import math
 giga_path = os.path.join(os.path.expanduser('~'), 'data/gigaword')
 nyt_path = os.path.join(giga_path, 'gigaword_eng_5_d2/data/nyt_eng/')
 wpb_path = os.path.join(giga_path, 'gigaword_eng_5_d2/data/wpb_eng/')
-apw_path = os.path.join(giga_path, 'gigaword_eng_5_d2/data/apw_eng/')
+apw_path = os.path.join(giga_path, 'gigaword_eng_5_d1/data/apw_eng/')
 PUNCTUATION = set([';', ':', ',', '.', '!', '?', "``", "''", "`", "\"", "'"])
 
 # dirpath = nyt_path
