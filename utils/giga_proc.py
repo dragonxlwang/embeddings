@@ -8,6 +8,7 @@ import math
 giga_path = os.path.join(os.path.expanduser('~'), 'data/gigaword')
 nyt_path = os.path.join(giga_path, 'gigaword_eng_5_d2/data/nyt_eng/')
 wpb_path = os.path.join(giga_path, 'gigaword_eng_5_d2/data/wpb_eng/')
+apw_path = os.path.join(giga_path, 'gigaword_eng_5_d2/data/apw_eng/')
 PUNCTUATION = set([';', ':', ',', '.', '!', '?', "``", "''", "`", "\"", "'"])
 
 # dirpath = nyt_path
@@ -19,6 +20,11 @@ dirpath = wpb_path
 matchstr = r'wpb_eng_\d+\.gz'
 dump_file_name = 'giga_wpb.txt'
 voc_file_name = 'giga_wpb.vcb'
+
+dirpath = apw_path
+matchstr = r'apw_eng_\d+\.gz'
+dump_file_name = 'giga_apw.txt'
+voc_file_name = 'giga_apw.vcb'
 
 
 def single_process_work(args):
