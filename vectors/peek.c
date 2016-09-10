@@ -250,6 +250,15 @@ PeekSet *PeekBuild(char *text_file_path, int if_lower, int if_rm_trail_punc,
   return ps;
 }
 
+real sid_peek_log_likelihood(int k, real *s, int n) {
+  // used for computing perplexity, since softmax does not work
+  real lpf = 0;
+  int i, j;
+  for (i = 0; i < n; i++) lpf += exp(s[i]);
+  lpf = log(lpf);
+  return s[i] - lpf;
+}
+
 real sid_peek_eval(Model *m, PeekSet *ps, int c, int beg, int end, int *pn,
                    int *npass) {
   // evaluate on peek set
@@ -293,11 +302,11 @@ real sid_peek_eval(Model *m, PeekSet *ps, int c, int beg, int end, int *pn,
       NumAddCVecDVec(h0, m->scr + ids[md] * m->n, hw, -hw, m->n, h);
       for (k = 0; k < ps->top_k; k++)
         if (ids[j] == ps->top_w[k]) break;
-      if (k != ps->top_k) {
+      if (k != ps->top_k) {  // only measure for the top_k words
         for (s = 0; s < ps->top_k; s++)
           p[s] = NumVecDot(h, m->tar + ps->top_w[s] * m->n, m->n);
-        NumSoftMax(p, 1, ps->top_k);
-        all -= log(p[k]);
+        /* NumSoftMax(p, 1, ps->top_k); */
+        all -= sid_peek_log_likelihood(k, p, ps->top_k);
         (*pn)++;
       }
     }
