@@ -254,9 +254,10 @@ real sid_peek_log_likelihood(int k, real *s, int n) {
   // used for computing perplexity, since softmax does not work
   real lpf = 0;
   int i, j;
-  for (i = 0; i < n; i++) lpf += exp(s[i]);
+  real m = MAX(s, n);
+  for (i = 0; i < n; i++) lpf += exp(s[i] - m);
   lpf = log(lpf);
-  return s[i] - lpf;
+  return s[i] - m - lpf;
 }
 
 real sid_peek_eval(Model *m, PeekSet *ps, int c, int beg, int end, int *pn,
