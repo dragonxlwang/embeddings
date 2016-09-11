@@ -258,7 +258,7 @@ real sid_peek_log_likelihood(int k, real *s, int n) {
   for (i = 0; i < n; i++) lpf += exp(s[i] - m);
   lpf = log(lpf);
   ll = s[k] - m - lpf;
-  printf("%e\n", ll);
+  printf("%e %e\n", ll, exp(ll));
   return ll;
 }
 
