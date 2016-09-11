@@ -258,7 +258,7 @@ real sid_peek_log_likelihood(int k, real *s, int n) {
   for (i = 0; i < n; i++) lpf += exp(s[i] - m);
   lpf = log(lpf);
   ll = s[k] - m - lpf;
-  printf("%e %e\n", ll, exp(ll));
+  printf("%e %e", ll, exp(ll));
   return ll;
 }
 
@@ -310,6 +310,8 @@ real sid_peek_eval(Model *m, PeekSet *ps, int c, int beg, int end, int *pn,
           p[s] = NumVecDot(h, m->tar + ps->top_w[s] * m->n, m->n);
         /* NumSoftMax(p, 1, ps->top_k); */
         all -= sid_peek_log_likelihood(k, p, ps->top_k);
+        NumSoftMax(p, 1, ps->top_k);
+        printf("%e \n", p[k]);
         (*pn)++;
       }
     }
