@@ -33,7 +33,7 @@ int main(int argc, char** argv) {
   if (V_CACHE_INTERMEDIATE_MODEL) {
     char* dump_file_path = FilePathSubExtension(V_MODEL_SAVE_PATH, "result");
     FILE* dump_file = fsopen(dump_file_path, "wb");
-    for (i = 0; i < V_ITER_NUM; i++) {
+    for (i = 50; i < V_ITER_NUM; i++) {
       char* mfp = sformat("%s.dir/%d.iter", V_MODEL_SAVE_PATH, i);
       if (!fexists(mfp)) continue;
       model = ModelLoad(mfp);
