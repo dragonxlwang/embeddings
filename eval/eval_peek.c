@@ -44,6 +44,7 @@ int main(int argc, char** argv) {
       ppl = PeekEval(model, p, C, V_THREAD_NUM);
       LOGC(0, 'c', 'r', "iter=%02d, PEEK:%.2e\n", i, ppl);
       fprintf(dump_file, "%d %lf\n", i, ppl);
+      ModelFree(model);
     }
     fclose(dump_file);
     free(dump_file_path);
