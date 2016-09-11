@@ -30,13 +30,6 @@ int main(int argc, char** argv) {
     PeekSetFree(p);
   }
 
-  printf("test for initial model\n");
-  model = ModelCreate(V, N, model_init_amp);  // >>
-  p = PeekLoad(file_path, vcb);
-  ppl = PeekEval(model, p, C, V_THREAD_NUM);  // multithread
-  LOGC(0, 'c', 'r', "\nPEEK:%.2e\n", ppl);
-  return 0;
-
   int i;
   if (V_CACHE_INTERMEDIATE_MODEL) {
     char* dump_file_path = FilePathSubExtension(V_MODEL_SAVE_PATH, "result");
