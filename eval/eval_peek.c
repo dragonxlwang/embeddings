@@ -33,10 +33,12 @@ int main(int argc, char** argv) {
   if (V_CACHE_INTERMEDIATE_MODEL) {
     char* dump_file_path = FilePathSubExtension(V_MODEL_SAVE_PATH, "result");
     FILE* dump_file = fsopen(dump_file_path, "wb");
-    for (i = 20; i < V_ITER_NUM; i++) {
+    for (i = 0; i < V_ITER_NUM; i++) {
       char* mfp = sformat("%s.dir/%d.iter", V_MODEL_SAVE_PATH, i);
       if (!fexists(mfp)) continue;
       model = ModelLoad(mfp);
+      NumVecMulC(model->scr, 1e-2, N * V);
+      NumVecMulC(model->tar, 1e-2, N * V);
       free(mfp);
       p = PeekLoad(file_path, vcb);
       ppl = PeekEval(model, p, C, V_THREAD_NUM);
