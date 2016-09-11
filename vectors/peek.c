@@ -259,7 +259,7 @@ real sid_peek_log_likelihood(int k, real *s, int n) {
   lpf = log(lpf);
   ll = s[k] - m - lpf;
   NumSoftMax(s, 1, n);
-  printf("%e %e %e", ll, exp(ll), s[k]);
+  printf("%e %e %e\n", ll, exp(ll), s[k]);
   return ll;
 }
 
