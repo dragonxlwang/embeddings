@@ -307,10 +307,11 @@ real sid_peek_eval(Model *m, PeekSet *ps, int c, int beg, int end, int *pn,
       if (k != ps->top_k) {  // only measure for the top_k words
         for (s = 0; s < ps->top_k; s++)
           p[s] = NumVecDot(h, m->tar + ps->top_w[s] * m->n, m->n);
-        /* NumSoftMax(p, 1, ps->top_k); */
-        all -= sid_peek_log_likelihood(k, p, ps->top_k);
+        NumSoftMax(p, 1, ps->top_k);
+        /* all -= sid_peek_log_likelihood(k, p, ps->top_k); */
         /* NumSoftMax(p, 1, ps->top_k); */
         /* printf("%e \n", p[k]); */
+        all += p[k];
         (*pn)++;
       }
     }
@@ -373,7 +374,10 @@ real PeekEval(Model *m, PeekSet *ps, int c, int thread_num) {
   free(end);
   free(avgp);
   free(pt);
-  return exp(prob / num);
+  /* return exp(prob / num); */
+  real rtavgp = prob / num;
+  real rtavgll = log(rtavgp);
+  return rtavgll;
 }
 
 real PeekEvalSingleThread(Model *m, PeekSet *ps, int c) {

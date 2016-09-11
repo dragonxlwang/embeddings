@@ -15,8 +15,8 @@ int main(int argc, char** argv) {
   V_MODEL_LOAD = 1;
   NumInit();
   VariableInit(argc, argv);
-  real sample_rate = 1e-4;
-  int top_k = 2e5;
+  real sample_rate = 2e-5;
+  int top_k = 5e4;
   int overwrite = 0;
   char* file_path = FilePathSubExtension(
       V_TEXT_FILE_PATH, sformat("l%dr%ds%.2e.lok", V_TEXT_LOWER,
