@@ -30,6 +30,7 @@ int main(int argc, char** argv) {
     PeekSetFree(p);
   }
 
+  printf("test for initial model\n");
   model = ModelCreate(V, N, model_init_amp);  // >>
   p = PeekLoad(file_path, vcb);
   ppl = PeekEval(model, p, C, V_THREAD_NUM);  // multithread
